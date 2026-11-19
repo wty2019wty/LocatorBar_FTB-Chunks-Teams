@@ -38,3 +38,9 @@ run/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
+
+### Local mod jars (should not be committed) ###
+libs/
+
+### Local FTB Teams reference checkout (separate repository) ###
+FTB-Teams/

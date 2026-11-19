@@ -29,8 +29,12 @@
 | FTB Library | 2101.1.0+（开发时使用 2101.1.37） |
 | Architectury API | 13.0.8（FTB Teams 的前置） |
 
-> FTB Teams 与 FTB Library 的编译/开发运行 jar 已放在 `libs/` 目录中。
-> 发布整合包时请确保玩家安装 FTB Teams、FTB Library 和 Architectury API。
+FTB Teams、FTB Library 与 Architectury API 由 Gradle 从官方 Maven 仓库自动下载：
+
+- FTB Maven：`https://maven.ftb.dev/releases`
+- Architectury Maven：`https://maven.architectury.dev/`
+
+发布整合包时请确保玩家安装 FTB Teams、FTB Library 和 Architectury API。
 
 ## 工作原理
 
@@ -83,7 +87,7 @@ FTB Teams 的公开 API 提供了队伍、成员和在线成员信息，但**并
 构建产物位于：
 
 ```text
-build/libs/locatorbar_ftb_teams-1.0.0.jar
+build/libs/locatorbar_ftb_teams-*.jar
 ```
 
 开发环境客户端/服务端：
@@ -119,4 +123,4 @@ src/main/java/com/locatorbar/ftb_teams/
 
 ## 许可
 
-MIT
+本项目使用 MIT 许可证，详见 [LICENSE](LICENSE)。
