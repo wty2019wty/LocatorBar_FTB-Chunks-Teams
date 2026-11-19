@@ -3,7 +3,7 @@ package com.locatorbar.ftb_teams.client;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * 纯客户端渲染配置。
+ * 纯客户端配置。
  */
 public final class ClientConfig {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
@@ -12,8 +12,26 @@ public final class ClientConfig {
             .comment("是否渲染定位条。", "Whether to render the locator bar.")
             .define("enabled", true);
 
+    public static final ModConfigSpec.IntValue MAX_RANGE = BUILDER
+            .comment("定位条显示的最大距离（单位：方块）。",
+                    "Maximum distance in blocks at which players are shown.")
+            .defineInRange("maxRange", 256, 16, 4096);
+
+    public static final ModConfigSpec.BooleanValue ONLY_SAME_TEAM = BUILDER
+            .comment("是否只显示同一 FTB Teams 队伍的玩家。",
+                    "If true, only players in the same FTB Teams team are shown.",
+                    "Set to false to show every player known to the client.")
+            .define("onlySameTeam", true);
+
+    public static final ModConfigSpec.BooleanValue USE_FTB_CHUNKS = BUILDER
+            .comment("如果安装了 FTB Chunks，是否使用它的长距离玩家追踪位置。",
+                    "When FTB Chunks is installed, use its long-range tracked player positions.",
+                    "This allows showing teammates outside vanilla entity tracking range.",
+                    "Disable to use only loaded vanilla player entities.")
+            .define("useFtbChunks", true);
+
     public static final ModConfigSpec.BooleanValue SHOW_NAMES = BUILDER
-            .comment("是否在定位点上方显示队友名字。", "Whether to show teammate names above the markers.")
+            .comment("是否在定位点上方显示玩家名字。", "Whether to show player names above the markers.")
             .define("showNames", false);
 
     public static final ModConfigSpec.IntValue BAR_WIDTH = BUILDER

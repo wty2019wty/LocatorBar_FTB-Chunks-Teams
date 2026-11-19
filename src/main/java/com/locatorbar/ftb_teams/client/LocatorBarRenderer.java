@@ -1,6 +1,5 @@
 package com.locatorbar.ftb_teams.client;
 
-import com.locatorbar.ftb_teams.network.TeamPositionsPayload;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -16,15 +15,13 @@ import java.util.UUID;
 /**
  * 定位条 HUD 渲染器。
  * <p>
- * 视觉风格参考原版 1.21.2+ 的玩家定位条：屏幕底部居中、横向排列、中央代表正前方，
- * 两侧代表左右方向；超出 ±90° 的队友会被贴在边缘并降低透明度。
+ * 中央代表玩家正前方，左右代表左右方向；超出 ±90° 的玩家会贴在边缘并降低透明度。
  */
 public final class LocatorBarRenderer implements LayeredDraw.Layer {
     private static final int BAR_HEIGHT = 9;
     private static final int EDGE_PADDING = 6;
     private static final int MARKER_SIZE = 5;
 
-    /** 16 个区分度较高的玩家颜色，根据 UUID 稳定分配。 */
     private static final int[] PLAYER_COLORS = {
             0xE53935, 0xFB8C00, 0xFDD835, 0x7CB342,
             0x43A047, 0x00ACC1, 0x1E88E5, 0x3949AB,
@@ -43,14 +40,13 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             return;
         }
 
-        ClientLocatorData.Snapshot snapshot = ClientLocatorData.snapshot(minecraft.level.dimension().location());
+        ClientTeamPositions.Snapshot snapshot = ClientTeamPositions.snapshot();
         if (snapshot.isEmpty()) {
             return;
         }
 
         int screenWidth = graphics.guiWidth();
         int screenHeight = graphics.guiHeight();
-        // 防止配置的宽度超过当前 GUI 宽度
         int barWidth = Math.min(ClientConfig.BAR_WIDTH.get(), Math.max(80, screenWidth - 8));
         int left = (screenWidth - barWidth) / 2;
         int top = screenHeight - 44 + ClientConfig.Y_OFFSET.get();
@@ -64,13 +60,13 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
 
         int centerX = left + barWidth / 2;
         int maxOffset = barWidth / 2 - EDGE_PADDING;
-        float range = snapshot.range();
+        float range = Math.max(1.0F, ClientConfig.MAX_RANGE.get());
 
         List<Marker> markers = new ArrayList<>();
-        for (TeamPositionsPayload.Entry entry : snapshot.entries()) {
-            double dx = entry.x() - playerX;
-            double dy = entry.y() - playerEyeY;
-            double dz = entry.z() - playerZ;
+        for (ClientTeamPositions.TrackedPlayer tracked : snapshot.players()) {
+            double dx = tracked.x() - playerX;
+            double dy = tracked.y() - playerEyeY;
+            double dz = tracked.z() - playerZ;
             double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
             if (distance > range) {
                 continue;
@@ -79,14 +75,14 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             // Minecraft 的 yaw：0 = +Z，90 = -X。目标方位角使用同样的约定。
             float targetYaw = (float) (Math.atan2(-dx, dz) * (180.0D / Math.PI));
             float relativeAngle = Mth.wrapDegrees(targetYaw - viewYaw);
-            float angle = ClientLocatorData.smoothAngle(entry.playerId(), relativeAngle);
+            float angle = smoothAngle(tracked.id(), relativeAngle);
 
             boolean behind = Math.abs(angle) > 90.0F;
             float clampedAngle = Mth.clamp(angle, -90.0F, 90.0F);
             int markerCenterX = centerX + Math.round(clampedAngle / 90.0F * maxOffset);
 
             // 相对高度：目标在上方时标记点上移，反之向下，最多偏移 2 像素
-            int yShift = Mth.clamp((int) Math.round(-(entry.y() - playerEyeY) / 24.0D), -2, 2);
+            int yShift = Mth.clamp((int) Math.round(-dy / 24.0D), -2, 2);
             int markerCenterY = top + BAR_HEIGHT / 2 + yShift;
 
             float fade = Mth.clamp((float) (distance / range), 0.0F, 1.0F);
@@ -94,13 +90,17 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             if (behind) {
                 alpha = (int) (alpha * 0.55F);
             }
+            if (tracked.longRange()) {
+                // FTB Chunks 长距离位置是方块级精度，稍微降低不透明度作为提示
+                alpha = (int) (alpha * 0.9F);
+            }
             alpha = Mth.clamp(alpha, 55, 255);
 
             markers.add(new Marker(
-                    entry,
+                    tracked,
                     markerCenterX - MARKER_SIZE / 2,
                     markerCenterY - MARKER_SIZE / 2,
-                    playerColor(entry.playerId()),
+                    playerColor(tracked.id()),
                     alpha
             ));
         }
@@ -135,15 +135,12 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
     }
 
     private static void drawBar(GuiGraphics graphics, int left, int top, int bottom, int barWidth, int centerX, int accent) {
-        // 外阴影 + 半透明底板
         graphics.fill(left - 1, top - 1, left + barWidth + 1, bottom + 1, 0x44000000);
         graphics.fill(left, top, left + barWidth, bottom, 0x88000000);
 
-        // 上下边缘使用队伍颜色点缀
         graphics.fill(left, top, left + barWidth, top + 1, withAlpha(accent, 115));
         graphics.fill(left, bottom - 1, left + barWidth, bottom, withAlpha(accent, 80));
 
-        // 四分之一刻度
         for (int i = 1; i <= 3; i++) {
             if (i == 2) {
                 continue;
@@ -152,7 +149,6 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             graphics.fill(tickX, top + 2, tickX + 1, bottom - 2, withAlpha(accent, 55));
         }
 
-        // 中央准线
         graphics.fill(centerX, top + 2, centerX + 1, bottom - 2, withAlpha(accent, 140));
     }
 
@@ -179,7 +175,7 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
     }
 
     /**
-     * 简单的水平避让：方向相近的队友不会完全重叠在一起。
+     * 方向相近的玩家不会完全重叠在一起。
      */
     private static void resolveOverlaps(List<Marker> markers, int minLeft, int maxLeft) {
         markers.sort(Comparator.comparingInt(marker -> marker.x));
@@ -213,6 +209,10 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
         }
     }
 
+    private static float smoothAngle(UUID playerId, float targetAngle) {
+        return SmoothAngles.update(playerId, targetAngle);
+    }
+
     private static int playerColor(UUID playerId) {
         return PLAYER_COLORS[Math.floorMod(playerId.hashCode(), PLAYER_COLORS.length)];
     }
@@ -222,13 +222,13 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
     }
 
     private static final class Marker {
-        private final TeamPositionsPayload.Entry entry;
+        private final ClientTeamPositions.TrackedPlayer entry;
         private int x;
         private final int y;
         private final int color;
         private final int alpha;
 
-        private Marker(TeamPositionsPayload.Entry entry, int x, int y, int color, int alpha) {
+        private Marker(ClientTeamPositions.TrackedPlayer entry, int x, int y, int color, int alpha) {
             this.entry = entry;
             this.x = x;
             this.y = y;

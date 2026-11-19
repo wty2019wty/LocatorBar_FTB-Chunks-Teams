@@ -1,15 +1,13 @@
 {
   "locatorbar_ftb_teams.configuration.title": "LocatorBar FTB Teams",
 
-  "locatorbar_ftb_teams.configuration.section.locatorbar_ftb_teams.common.toml": "Server Settings",
-  "locatorbar_ftb_teams.configuration.section.locatorbar_ftb_teams.common.toml.title": "Server Settings",
-  "locatorbar_ftb_teams.configuration.syncIntervalTicks": "Sync Interval (ticks)",
-  "locatorbar_ftb_teams.configuration.maxRange": "Maximum Range (blocks)",
-  "locatorbar_ftb_teams.configuration.onlySameTeam": "Only Show Same Team",
-
   "locatorbar_ftb_teams.configuration.section.locatorbar_ftb_teams.client.toml": "Client Settings",
   "locatorbar_ftb_teams.configuration.section.locatorbar_ftb_teams.client.toml.title": "Client Settings",
+
   "locatorbar_ftb_teams.configuration.enabled": "Enable Locator Bar",
+  "locatorbar_ftb_teams.configuration.maxRange": "Maximum Range (blocks)",
+  "locatorbar_ftb_teams.configuration.onlySameTeam": "Only Show Same Team",
+  "locatorbar_ftb_teams.configuration.useFtbChunks": "Use FTB Chunks Positions",
   "locatorbar_ftb_teams.configuration.showNames": "Show Names",
   "locatorbar_ftb_teams.configuration.barWidth": "Bar Width",
   "locatorbar_ftb_teams.configuration.yOffset": "Vertical Offset",

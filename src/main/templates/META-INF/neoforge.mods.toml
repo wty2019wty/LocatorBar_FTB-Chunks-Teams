@@ -86,13 +86,13 @@ ${mod_description}
     ordering="NONE"
     side="BOTH"
 
-# Team data source: FTB Teams is required
+# Team data source: FTB Teams is required on the client only
 [[dependencies.${mod_id}]]
     modId="ftbteams"
     type="required"
     versionRange="[2101.1.0,)"
     ordering="AFTER"
-    side="BOTH"
+    side="CLIENT"
 
 # FTB Teams depends on FTB Library; we also read the team color property
 [[dependencies.${mod_id}]]
@@ -100,7 +100,15 @@ ${mod_description}
     type="required"
     versionRange="[2101.1.0,)"
     ordering="AFTER"
-    side="BOTH"
+    side="CLIENT"
+
+# Optional: FTB Chunks provides long-range player positions to the client
+[[dependencies.${mod_id}]]
+    modId="ftbchunks"
+    type="optional"
+    versionRange="[2101.1.0,)"
+    ordering="AFTER"
+    side="CLIENT"
 
 # Features are specific properties of the game environment, that you may want to declare you require. This example declares
 # that your mod requires GL version 3.2 or higher. Other features will be added. They are side aware so declaring this won't

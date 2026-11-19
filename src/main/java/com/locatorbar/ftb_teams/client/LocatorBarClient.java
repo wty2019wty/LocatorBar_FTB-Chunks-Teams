@@ -9,13 +9,14 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 /**
- * 客户端入口：注册客户端配置、配置界面和定位条 GUI 层。
+ * 客户端入口。没有任何服务端逻辑或自定义网络包。
  */
 @Mod(value = LocatorBarMod.MODID, dist = Dist.CLIENT)
 @EventBusSubscriber(modid = LocatorBarMod.MODID, value = Dist.CLIENT)
@@ -28,13 +29,17 @@ public final class LocatorBarClient {
     }
 
     @SubscribeEvent
+    public static void onClientTick(ClientTickEvent.Post event) {
+        ClientTeamPositions.update();
+    }
+
+    @SubscribeEvent
     public static void registerGuiLayers(RegisterGuiLayersEvent event) {
-        // 放在快捷栏之上，具体 Y 坐标由渲染器自行控制
         event.registerAbove(VanillaGuiLayers.HOTBAR, LOCATOR_BAR_LAYER, new LocatorBarRenderer());
     }
 
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        ClientLocatorData.clear();
+        ClientTeamPositions.clear();
     }
 }

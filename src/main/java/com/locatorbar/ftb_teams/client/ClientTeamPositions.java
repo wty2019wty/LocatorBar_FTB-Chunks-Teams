@@ -1,0 +1,167 @@
+package com.locatorbar.ftb_teams.client;
+
+import dev.ftb.mods.ftblibrary.icon.Color4I;
+import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
+import dev.ftb.mods.ftbteams.api.Team;
+import dev.ftb.mods.ftbteams.api.client.ClientTeamManager;
+import dev.ftb.mods.ftbteams.api.client.KnownClientPlayer;
+import dev.ftb.mods.ftbteams.api.property.TeamProperties;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.phys.Vec3;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * 纯客户端的位置收集器。
+ * <p>
+ * 数据来源（按优先级）：
+ * <ol>
+ *     <li>原版客户端已经加载的玩家实体 —— 位置实时且精确，但只在服务端实体追踪范围内；</li>
+ *     <li>FTB Chunks 客户端长距离追踪数据 —— 可以覆盖更远距离，但坐标是方块级精度。</li>
+ * </ol>
+ * 队伍过滤使用 FTB Teams 客户端已经同步的 {@link ClientTeamManager}。
+ */
+public final class ClientTeamPositions {
+    private static List<TrackedPlayer> players = List.of();
+    private static int teamColor = 0xFFFFFF;
+
+    private ClientTeamPositions() {
+    }
+
+    /**
+     * 每个客户端 tick 调用一次。
+     */
+    public static void update() {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null || minecraft.level == null) {
+            clear();
+            return;
+        }
+
+        FTBTeamsAPI.API api = FTBTeamsAPI.api();
+        if (api == null || !api.isClientManagerLoaded()) {
+            clear();
+            return;
+        }
+
+        ClientTeamManager manager = api.getClientManager();
+        KnownClientPlayer self = manager.getKnownPlayer(minecraft.player.getUUID()).orElse(manager.self());
+        UUID selfTeamId = self == null ? null : self.teamId();
+        int color = teamColor(manager.selfTeam());
+
+        boolean onlySameTeam = ClientConfig.ONLY_SAME_TEAM.get();
+        double maxRange = ClientConfig.MAX_RANGE.get();
+        double maxRangeSquared = maxRange * maxRange;
+
+        Map<UUID, TrackedPlayer> found = new LinkedHashMap<>();
+
+        // 1) 原版客户端实体：精度最高，优先使用
+        for (AbstractClientPlayer other : minecraft.level.players()) {
+            if (other == minecraft.player) {
+                continue;
+            }
+            if (onlySameTeam && !isSameTeam(manager, other.getUUID(), selfTeamId)) {
+                continue;
+            }
+
+            double dx = other.getX() - minecraft.player.getX();
+            double dy = other.getEyeY() - minecraft.player.getEyeY();
+            double dz = other.getZ() - minecraft.player.getZ();
+            if (dx * dx + dy * dy + dz * dz > maxRangeSquared) {
+                continue;
+            }
+
+            found.put(other.getUUID(), new TrackedPlayer(
+                    other.getUUID(),
+                    other.getGameProfile().getName(),
+                    other.getX(),
+                    other.getEyeY(),
+                    other.getZ(),
+                    false
+            ));
+        }
+
+        // 2) FTB Chunks 长距离追踪：仅补充原版实体范围外的玩家
+        if (ClientConfig.USE_FTB_CHUNKS.get()) {
+            for (Map.Entry<UUID, Vec3> entry : FtbChunksIntegration.trackedPositions().entrySet()) {
+                UUID playerId = entry.getKey();
+                if (playerId.equals(minecraft.player.getUUID()) || found.containsKey(playerId)) {
+                    continue;
+                }
+                if (onlySameTeam && !isSameTeam(manager, playerId, selfTeamId)) {
+                    continue;
+                }
+
+                Vec3 pos = entry.getValue();
+                double approximateEyeY = pos.y + 1.0D;
+                double dx = pos.x - minecraft.player.getX();
+                double dy = approximateEyeY - minecraft.player.getEyeY();
+                double dz = pos.z - minecraft.player.getZ();
+                if (dx * dx + dy * dy + dz * dz > maxRangeSquared) {
+                    continue;
+                }
+
+                String name = manager.getKnownPlayer(playerId)
+                        .map(KnownClientPlayer::name)
+                        .filter(playerName -> !playerName.isBlank())
+                        .orElse("?");
+
+                found.put(playerId, new TrackedPlayer(
+                        playerId,
+                        name,
+                        pos.x,
+                        approximateEyeY,
+                        pos.z,
+                        true
+                ));
+            }
+        }
+
+        players = List.copyOf(found.values());
+        teamColor = color;
+        SmoothAngles.retain(found.keySet());
+    }
+
+    public static void clear() {
+        players = List.of();
+        teamColor = 0xFFFFFF;
+        SmoothAngles.clear();
+    }
+
+    public static Snapshot snapshot() {
+        return new Snapshot(players, teamColor);
+    }
+
+    private static boolean isSameTeam(ClientTeamManager manager, UUID playerId, UUID selfTeamId) {
+        if (selfTeamId == null) {
+            return false;
+        }
+        return manager.getKnownPlayer(playerId)
+                .map(known -> selfTeamId.equals(known.teamId()))
+                .orElse(false);
+    }
+
+    private static int teamColor(Team team) {
+        if (team == null) {
+            return 0xFFFFFF;
+        }
+        Color4I color = team.getProperty(TeamProperties.COLOR);
+        return color == null ? 0xFFFFFF : color.rgb() & 0xFFFFFF;
+    }
+
+    /**
+     * @param longRange true 表示该位置来自 FTB Chunks 长距离追踪，精度为方块级
+     */
+    public record TrackedPlayer(UUID id, String name, double x, double y, double z, boolean longRange) {
+    }
+
+    public record Snapshot(List<TrackedPlayer> players, int teamColor) {
+        public boolean isEmpty() {
+            return players.isEmpty();
+        }
+    }
+}

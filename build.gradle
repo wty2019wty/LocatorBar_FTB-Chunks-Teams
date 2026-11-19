@@ -132,20 +132,21 @@ configurations {
 }
 
 dependencies {
-    // FTB Teams 的公开 API 与 FTB Library 的 Color4I 类型在编译期使用。
-    // 通过官方 Maven 获取，避免把第三方 jar 提交进仓库。
+    // 纯客户端实现：只编译依赖 FTB Teams 客户端 API 与 FTB Library。
+    // FTB Chunks 通过反射做可选集成，因此不声明编译依赖。
     compileOnly("dev.ftb.mods:ftb-teams-neoforge:2101.1.12") {
         transitive = false
     }
-    compileOnly("dev.ftb.mods:ftb-library-neoforge:2101.1.37") {
+    compileOnly("dev.ftb.mods:ftb-library-neoforge:2101.1.39") {
         transitive = false
     }
 
-    // 开发环境运行时需要 FTB Teams、FTB Library 以及它们依赖的 Architectury API。
+    // 开发环境运行时依赖。FTB Chunks 是可选集成，放在开发运行时中方便测试。
     // 使用 localRuntime 而不是 runtimeOnly，避免把依赖发布给下游模组。
     localRuntime "dev.ftb.mods:ftb-teams-neoforge:2101.1.12"
-    localRuntime "dev.ftb.mods:ftb-library-neoforge:2101.1.37"
-    localRuntime "dev.architectury:architectury-neoforge:13.0.8"
+    localRuntime "dev.ftb.mods:ftb-library-neoforge:2101.1.39"
+    localRuntime "dev.architectury:architectury-neoforge:13.0.11"
+    localRuntime "dev.ftb.mods:ftb-chunks-neoforge:2101.1.24"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

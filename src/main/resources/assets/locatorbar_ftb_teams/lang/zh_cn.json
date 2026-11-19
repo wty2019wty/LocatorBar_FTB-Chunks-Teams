@@ -1,15 +1,13 @@
 {
   "locatorbar_ftb_teams.configuration.title": "FTB Teams 定位条",
 
-  "locatorbar_ftb_teams.configuration.section.locatorbar_ftb_teams.common.toml": "服务端设置",
-  "locatorbar_ftb_teams.configuration.section.locatorbar_ftb_teams.common.toml.title": "服务端设置",
-  "locatorbar_ftb_teams.configuration.syncIntervalTicks": "同步间隔（tick）",
-  "locatorbar_ftb_teams.configuration.maxRange": "最大距离（方块）",
-  "locatorbar_ftb_teams.configuration.onlySameTeam": "仅显示同队玩家",
-
   "locatorbar_ftb_teams.configuration.section.locatorbar_ftb_teams.client.toml": "客户端设置",
   "locatorbar_ftb_teams.configuration.section.locatorbar_ftb_teams.client.toml.title": "客户端设置",
+
   "locatorbar_ftb_teams.configuration.enabled": "启用定位条",
+  "locatorbar_ftb_teams.configuration.maxRange": "最大距离（方块）",
+  "locatorbar_ftb_teams.configuration.onlySameTeam": "仅显示同队玩家",
+  "locatorbar_ftb_teams.configuration.useFtbChunks": "使用 FTB Chunks 位置",
   "locatorbar_ftb_teams.configuration.showNames": "显示玩家名字",
   "locatorbar_ftb_teams.configuration.barWidth": "定位条宽度",
   "locatorbar_ftb_teams.configuration.yOffset": "垂直偏移",

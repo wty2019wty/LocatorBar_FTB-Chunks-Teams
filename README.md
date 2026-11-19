@@ -1,72 +1,77 @@
 # LocatorBar FTB Teams
 
-一个面向 **Minecraft 1.21.1 / NeoForge 21.1.265** 的定位条模组。
+面向 **Minecraft 1.21.1 / NeoForge 21.1.265** 的**纯客户端**定位条模组。
 
-它通过 **FTB Teams** 的队伍数据判断哪些玩家是自己的队友，并在 HUD 底部绘制类似原版 1.21.2+ 玩家定位条（Locator Bar）的界面，用来指示队友的相对方向和大致距离。
+它读取客户端已经同步的 **FTB Teams** 队伍数据判断队友，并在 HUD 底部绘制类似原版 1.21.2+ 玩家定位条（Locator Bar）的界面。
+
+**作者：wty2019wty**
+
+## 纯客户端说明
+
+本模组：
+
+- 不注册自定义网络包；
+- 不要求服务端安装；
+- 不向服务端请求额外位置数据；
+- 只在客户端读取已有数据并绘制 HUD。
+
+## 位置数据来源
+
+FTB Teams 只同步队伍关系，不同步玩家坐标。因此本模组使用以下客户端数据源：
+
+1. **原版客户端已加载的玩家实体**
+   - 位置实时、精确；
+   - 但只包含服务端实体追踪范围内的玩家（通常几十到一百多格，取决于服务器视距/实体追踪配置）。
+
+2. **FTB Chunks 客户端长距离玩家追踪（可选）**
+   - 安装 FTB Chunks 后，其服务端会把同队/盟友玩家的方块坐标同步到客户端；
+   - 可以显示超出原版实体追踪范围的队友；
+   - 坐标是方块级精度，且受 FTB Chunks 的 `location_mode` 等配置影响；
+   - 通过反射读取 `FTBChunksClient.INSTANCE.longRangePlayerTracker`，FTB Chunks 不存在或字段变化时自动降级。
+
+3. **FTB Teams 客户端队伍数据**
+   - `ClientTeamManager` 会在登录时同步所有队伍和玩家的队伍 ID；
+   - 用于判断目标玩家是否和自己是同一队伍；
+   - 同时读取队伍颜色作为定位条点缀色。
 
 ## 功能
 
-- 在快捷栏上方显示一条横向定位条。
-- 中央代表玩家正前方，左右分别代表左右方向。
-- 每个队友显示为一个彩色圆点：
-  - 颜色由玩家 UUID 稳定分配，便于区分不同队友。
-  - 距离越远，圆点越透明。
-  - 目标位于身后时，圆点会贴在定位条边缘并进一步变暗。
-  - 目标高于/低于玩家时，圆点会轻微上移/下移。
-  - 方向相近的圆点会自动水平避让，避免完全重叠。
-- 定位条的上下边缘和中央准线使用 FTB Teams 队伍颜色点缀。
-- 可在客户端配置中开启队友名字显示。
-- 默认只显示同一 FTB Teams 队伍的玩家，也可在服务端配置中改为显示所有附近玩家。
-- 跨维度玩家不会显示（与原版定位条行为一致）。
+- 在快捷栏上方显示横向定位条。
+- 中央代表正前方，左右代表左右方向。
+- 每个队友显示为彩色圆点：
+  - 颜色根据玩家 UUID 稳定分配；
+  - 距离越远越透明；
+  - 身后玩家贴在边缘并变暗；
+  - 相对高低会让圆点轻微上下移动；
+  - 方向相近时自动水平避让。
+- 定位条边缘和中央准线使用 FTB Teams 队伍颜色。
+- 可配置最大距离、是否仅显示同队、是否使用 FTB Chunks 位置、是否显示名字等。
 
 ## 依赖
 
-| 依赖 | 版本 |
-| --- | --- |
-| Minecraft | 1.21.1 |
-| NeoForge | 21.1.265 |
-| FTB Teams | 2101.1.0+（开发时使用 2101.1.12） |
-| FTB Library | 2101.1.0+（开发时使用 2101.1.37） |
-| Architectury API | 13.0.8（FTB Teams 的前置） |
-
-FTB Teams、FTB Library 与 Architectury API 由 Gradle 从官方 Maven 仓库自动下载：
-
-- FTB Maven：`https://maven.ftb.dev/releases`
-- Architectury Maven：`https://maven.architectury.dev/`
-
-发布整合包时请确保玩家安装 FTB Teams、FTB Library 和 Architectury API。
-
-## 工作原理
-
-FTB Teams 的公开 API 提供了队伍、成员和在线成员信息，但**并不直接同步玩家坐标**。因此本模组的实现方式如下：
-
-1. 服务端每 `syncIntervalTicks` tick 调用一次 `FTBTeamsAPI`：
-   - 使用 `TeamManager#getTeamForPlayer` 获取玩家的“有效队伍”（个人队伍或队伍频道）。
-   - 使用 `Team#getOnlineMembers` 获取同队在线成员。
-   - 过滤掉不同维度、超过最大距离的成员。
-   - 读取 `TeamProperties.COLOR` 作为定位条点缀色。
-2. 通过 NeoForge 自定义网络包 `locatorbar_ftb_teams:team_positions`，把队友位置单独发送给对应玩家。
-3. 客户端缓存最新数据，并在 `RegisterGuiLayersEvent` 注册的 HUD 层中绘制定位条。
-4. 数据超过 2.5 秒未更新会自动隐藏，避免玩家退出或断线后残留标记。
-
-所有位置同步都只发送给同一队伍的玩家，服务端不会把队友坐标广播给无关玩家。
-
-## 配置文件
-
-### 服务端（`config/locatorbar_ftb_teams-common.toml`）
-
-| 配置项 | 默认值 | 说明 |
+| 依赖 | 是否必需 | 版本 |
 | --- | --- | --- |
-| `syncIntervalTicks` | `10` | 位置同步间隔，单位 tick。20 tick = 1 秒。 |
-| `maxRange` | `256` | 最大显示距离，单位方块。 |
-| `onlySameTeam` | `true` | 是否只显示同一 FTB Teams 队伍的玩家。改为 `false` 可显示所有附近玩家。 |
+| Minecraft | 必需 | 1.21.1 |
+| NeoForge | 必需 | 21.1.265 |
+| FTB Teams | 客户端必需 | 2101.1.0+ |
+| FTB Library | 客户端必需 | 2101.1.0+ |
+| Architectury API | 客户端的 FTB Teams 前置 | 13.0.8+ |
+| FTB Chunks | 可选 | 2101.1.0+ |
 
-### 客户端（`config/locatorbar_ftb_teams-client.toml`）
+> 仅需在**客户端**安装。不要把本模组安装到专用服务器上。
+> 如果服务器装了 FTB Chunks，客户端也装 FTB Chunks，才能获得长距离位置数据。
+
+## 配置
+
+配置文件：`config/locatorbar_ftb_teams-client.toml`
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `enabled` | `true` | 是否渲染定位条。 |
-| `showNames` | `false` | 是否在圆点上方显示队友名字。 |
+| `maxRange` | `256` | 最大显示距离，单位方块。 |
+| `onlySameTeam` | `true` | 是否只显示同一 FTB Teams 队伍的玩家。改为 `false` 可显示客户端已知的所有玩家。 |
+| `useFtbChunks` | `true` | 安装 FTB Chunks 时是否使用其长距离玩家位置。 |
+| `showNames` | `false` | 是否在圆点上方显示玩家名字。 |
 | `barWidth` | `182` | 定位条宽度，单位 GUI 像素。 |
 | `yOffset` | `0` | 垂直偏移，正数向下、负数向上。 |
 | `scale` | `1.0` | 整体缩放比例。 |
@@ -84,43 +89,37 @@ FTB Teams 的公开 API 提供了队伍、成员和在线成员信息，但**并
 .\gradlew.bat build
 ```
 
-构建产物位于：
+构建产物：
 
 ```text
-build/libs/locatorbar_ftb_teams-*.jar
+build/libs/locatorbar_ftb_teams-0.1.0.jar
 ```
 
-开发环境客户端/服务端：
+开发环境客户端：
 
 ```powershell
 .\gradlew.bat runClient
-.\gradlew.bat runServer
 ```
 
-## 目录结构
+## 工作原理
 
-```text
-src/main/java/com/locatorbar/ftb_teams/
-├── LocatorBarMod.java              # 主模组类，注册通用配置
-├── Config.java                     # 服务端配置
-├── client/
-│   ├── ClientConfig.java           # 客户端渲染配置
-│   ├── ClientLocatorData.java      # 客户端位置缓存与角度平滑
-│   ├── LocatorBarClient.java       # 客户端入口 / GUI 层注册
-│   └── LocatorBarRenderer.java     # 定位条 HUD 渲染
-├── network/
-│   ├── LocatorBarNetwork.java      # 网络包注册与客户端处理
-│   └── TeamPositionsPayload.java   # 队友位置同步包
-└── server/
-    └── TeamPositionSync.java       # 服务端周期性收集并发送队友位置
-```
+1. 每个客户端 tick：
+   - 从 `ClientTeamManager` 获取自己的队伍 ID 和队伍颜色；
+   - 遍历 `Minecraft.getInstance().level.players()` 获取已加载玩家实体位置；
+   - 如果启用 FTB Chunks 集成，读取其客户端长距离追踪位置作为补充；
+   - 按队伍、维度（仅当前维度）、距离过滤。
+2. 在 `RegisterGuiLayersEvent` 注册的 HUD 层中绘制定位条。
+3. 不做任何服务端同步，因此不需要服务端安装，也不会增加服务端网络负担。
 
-## 与原版定位条的区别
+## 限制
 
-- 原版定位条从 1.21.2 才开始提供；本模组为 1.21.1 实现了类似效果。
-- 本模组默认只显示 FTB Teams 同队玩家，而不是服务器上的所有玩家。
-- 圆点颜色根据玩家 UUID 分配，不使用原版的玩家颜色机制。
+- **没有 FTB Chunks 时**，只能看到原版客户端已经加载的玩家实体，距离受服务器实体追踪范围限制。
+- **有 FTB Chunks 时**，位置更新是方块级且仅在目标移动一定距离后刷新，因此圆点可能有轻微跳动（已做角度平滑）。
+- FTB Chunks 的长距离追踪是否包含某名玩家，取决于其 `location_mode`、队伍/盟友关系和服务器配置。
+- 跨维度玩家不会显示。
 
 ## 许可
 
 本项目使用 MIT 许可证，详见 [LICENSE](LICENSE)。
+
+Copyright (c) 2026 wty2019wty
