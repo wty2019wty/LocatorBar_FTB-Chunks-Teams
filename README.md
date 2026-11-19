@@ -1,4 +1,4 @@
-# LocatorBar FTB Teams
+# LocatorBar_FTB-Chunks-Teams
 
 面向 **Minecraft 1.21.1 / NeoForge 21.1.265** 的**纯客户端**定位条模组。
 
@@ -81,7 +81,7 @@ FTB Teams 只同步队伍关系，不同步玩家坐标。因此本模组使用�
 | `yOffset` | `0` | 垂直偏移，正数向下、负数向上。 |
 | `scale` | `1.0` | 整体缩放比例。 |
 
-也可以直接在游戏内通过 **模组列表 → LocatorBar FTB Teams → 配置** 修改。
+也可以直接在游戏内通过 **模组列表 → LocatorBar_FTB-Chunks-Teams → 配置** 修改。
 
 ## 构建
 
@@ -97,7 +97,7 @@ FTB Teams 只同步队伍关系，不同步玩家坐标。因此本模组使用�
 构建产物：
 
 ```text
-build/libs/locatorbar_ftb_teams-0.1.0.jar
+build/libs/locatorbar_ftb_teams-0.1.1-beta.0.jar
 ```
 
 开发环境客户端：
