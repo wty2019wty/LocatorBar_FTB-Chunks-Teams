@@ -14,5 +14,19 @@
   "locatorbar_ftb_chunks_teams.configuration.barWidth": "定位条宽度",
   "locatorbar_ftb_chunks_teams.configuration.yOffset": "垂直偏移",
   "locatorbar_ftb_chunks_teams.configuration.scale": "缩放比例",
-  "locatorbar_ftb_chunks_teams.configuration.debug": "调试日志"
+  "locatorbar_ftb_chunks_teams.configuration.debug": "调试日志",
+  "locatorbar_ftb_chunks_teams.configuration.hiddenPlayers": "隐藏的玩家列表",
+
+  "key.categories.locatorbar_ftb_chunks_teams": "定位条 FTB Teams",
+  "key.locatorbar_ftb_chunks_teams.open_filter": "打开玩家过滤",
+
+  "locatorbar_ftb_chunks_teams.filter.title": "玩家过滤",
+  "locatorbar_ftb_chunks_teams.filter.hint": "隐藏名单会保存到客户端配置中",
+  "locatorbar_ftb_chunks_teams.filter.hide": "隐藏",
+  "locatorbar_ftb_chunks_teams.filter.show": "显示",
+  "locatorbar_ftb_chunks_teams.filter.show_all": "全部显示",
+  "locatorbar_ftb_chunks_teams.filter.empty": "当前没有可管理的玩家",
+  "locatorbar_ftb_chunks_teams.filter.source.vanilla": "原版实体追踪",
+  "locatorbar_ftb_chunks_teams.filter.source.long_range": "FTB Chunks 长距离",
+  "locatorbar_ftb_chunks_teams.filter.source.config": "过滤名单中的记录"
 }

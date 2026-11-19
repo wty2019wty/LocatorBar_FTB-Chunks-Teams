@@ -1,6 +1,7 @@
 package com.locatorbar.ftb_teams.client;
 
 import com.locatorbar.ftb_teams.LocatorBarMod;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -31,6 +32,18 @@ public final class LocatorBarClient {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         ClientTeamPositions.update();
+
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.screen == null && minecraft.player != null && minecraft.level != null) {
+            boolean openFilter = false;
+            // 一次消费掉所有排队的点击，避免关闭界面后立刻又被旧点击重新打开
+            while (ClientKeyMappings.OPEN_FILTER.consumeClick()) {
+                openFilter = true;
+            }
+            if (openFilter) {
+                minecraft.setScreen(new PlayerFilterScreen(null));
+            }
+        }
     }
 
     @SubscribeEvent

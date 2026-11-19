@@ -14,5 +14,19 @@
   "locatorbar_ftb_chunks_teams.configuration.barWidth": "Bar Width",
   "locatorbar_ftb_chunks_teams.configuration.yOffset": "Vertical Offset",
   "locatorbar_ftb_chunks_teams.configuration.scale": "Scale",
-  "locatorbar_ftb_chunks_teams.configuration.debug": "Debug Logging"
+  "locatorbar_ftb_chunks_teams.configuration.debug": "Debug Logging",
+  "locatorbar_ftb_chunks_teams.configuration.hiddenPlayers": "Hidden Players",
+
+  "key.categories.locatorbar_ftb_chunks_teams": "LocatorBar FTB Teams",
+  "key.locatorbar_ftb_chunks_teams.open_filter": "Open Player Filter",
+
+  "locatorbar_ftb_chunks_teams.filter.title": "Player Filter",
+  "locatorbar_ftb_chunks_teams.filter.hint": "Hidden players are saved in the client config",
+  "locatorbar_ftb_chunks_teams.filter.hide": "Hide",
+  "locatorbar_ftb_chunks_teams.filter.show": "Show",
+  "locatorbar_ftb_chunks_teams.filter.show_all": "Show All",
+  "locatorbar_ftb_chunks_teams.filter.empty": "No players to manage right now",
+  "locatorbar_ftb_chunks_teams.filter.source.vanilla": "Vanilla entity tracking",
+  "locatorbar_ftb_chunks_teams.filter.source.long_range": "FTB Chunks long-range",
+  "locatorbar_ftb_chunks_teams.filter.source.config": "Filter list entry"
 }

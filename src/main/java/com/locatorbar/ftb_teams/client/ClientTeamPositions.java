@@ -29,6 +29,7 @@ import java.util.UUID;
  */
 public final class ClientTeamPositions {
     private static List<TrackedPlayer> players = List.of();
+    private static List<TrackedPlayer> candidates = List.of();
     private static int teamColor = 0xFFFFFF;
     private static long lastDebugLog;
 
@@ -70,6 +71,8 @@ public final class ClientTeamPositions {
                 : configuredRange * configuredRange;
 
         Map<UUID, TrackedPlayer> found = new LinkedHashMap<>();
+        // 本 tick 的隐藏名单只解析一次，避免每个玩家都重复读取配置
+        PlayerFilter.Filter hiddenFilter = PlayerFilter.load();
 
         // 1) 原版客户端实体：精度最高，优先使用
         for (AbstractClientPlayer other : minecraft.level.players()) {
@@ -136,17 +139,23 @@ public final class ClientTeamPositions {
             }
         }
 
-        players = List.copyOf(found.values());
+        List<TrackedPlayer> allCandidates = List.copyOf(found.values());
+        candidates = allCandidates;
+        players = allCandidates.stream()
+                .filter(player -> !hiddenFilter.isHidden(player.id(), player.name()))
+                .toList();
         teamColor = color;
         SmoothAngles.retain(found.keySet());
 
-        debug("selfTeam={}, selfTeamId={}, teamMembers={}, levelPlayers={}, ftbChunksPositions={}, maxRange={}, visible={}",
+        debug("selfTeam={}, selfTeamId={}, teamMembers={}, levelPlayers={}, ftbChunksPositions={}, maxRange={}, candidates={}, hidden={}, visible={}",
                 selfTeam == null ? "none" : selfTeam.getId(),
                 selfTeamId,
                 teamMembers.size(),
                 minecraft.level.players().size(),
                 ftbChunksPositions,
                 configuredRange <= 0.0D ? "unlimited" : configuredRange,
+                allCandidates.size(),
+                allCandidates.size() - players.size(),
                 players.size());
     }
 
@@ -164,12 +173,21 @@ public final class ClientTeamPositions {
 
     public static void clear() {
         players = List.of();
+        candidates = List.of();
         teamColor = 0xFFFFFF;
         SmoothAngles.clear();
     }
 
     public static Snapshot snapshot() {
         return new Snapshot(players, teamColor);
+    }
+
+    /**
+     * 当前所有候选玩家，包含被过滤名单隐藏的玩家。
+     * 过滤界面需要它才能把隐藏项重新显示出来。
+     */
+    public static List<TrackedPlayer> candidates() {
+        return candidates;
     }
 
     private static boolean isSameTeam(ClientTeamManager manager, UUID playerId, UUID selfTeamId, Set<UUID> teamMembers) {

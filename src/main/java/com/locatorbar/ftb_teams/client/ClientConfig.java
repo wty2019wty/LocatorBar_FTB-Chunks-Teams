@@ -2,6 +2,8 @@ package com.locatorbar.ftb_teams.client;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
+import java.util.List;
+
 /**
  * 纯客户端配置。
  */
@@ -58,6 +60,14 @@ public final class ClientConfig {
             .comment("在日志中输出定位条调试信息（队伍成员数、可见玩家数、FTB Chunks 位置数）。",
                     "Log locator bar diagnostics: team member count, visible players, FTB Chunks positions.")
             .define("debug", false);
+
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> HIDDEN_PLAYERS = BUILDER
+            .comment("要隐藏的玩家列表。每项可以是玩家名、UUID，或 \"UUID|玩家名\"。",
+                    "List of players hidden from the locator bar. Each entry may be a player name,",
+                    "a UUID, or \"UUID|playerName\". Names are case-insensitive; UUIDs are exact.",
+                    "The in-game player filter screen writes entries as \"UUID|playerName\".")
+            .defineListAllowEmpty("hiddenPlayers", List.<String>of(), () -> "",
+                    element -> element instanceof String value && !value.isBlank());
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 
