@@ -116,27 +116,20 @@ configurations {
 }
 
 dependencies {
-    // Example optional mod dependency with JEI
-    // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
-    // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
-    // compileOnly "mezz.jei:jei-${mc_version}-neoforge-api:${jei_version}"
-    // We add the full version to localRuntime, not runtimeOnly, so that we do not publish a dependency on it
-    // localRuntime "mezz.jei:jei-${mc_version}-neoforge:${jei_version}"
+    // FTB Teams 的公开 API 与 FTB Library 的 Color4I 类型在编译期使用。
+    // 这些 jar 已放在 ./libs 目录中，避免依赖不稳定的远程仓库。
+    compileOnly files(
+            "libs/ftb-teams-neoforge-2101.1.12.jar",
+            "libs/ftb-library-neoforge-2101.1.37.jar"
+    )
 
-    // Example mod dependency using a mod jar from ./libs with a flat dir repository
-    // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
-    // The group id is ignored when searching -- in this case, it is "blank"
-    // implementation "blank:coolmod-${mc_version}:${coolmod_version}"
-
-    // Example mod dependency using a file as dependency
-    // implementation files("libs/coolmod-${mc_version}-${coolmod_version}.jar")
-
-    // Example project dependency using a sister or child project:
-    // implementation project(":myproject")
-
-    // For more info:
-    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-    // http://www.gradle.org/docs/current/userguide/dependency_management.html
+    // 开发环境运行时需要 FTB Teams、FTB Library 以及它们依赖的 Architectury API。
+    // 使用 localRuntime 而不是 runtimeOnly，避免把依赖发布给下游模组。
+    localRuntime files(
+            "libs/ftb-teams-neoforge-2101.1.12.jar",
+            "libs/ftb-library-neoforge-2101.1.37.jar",
+            "libs/architectury-neoforge-13.0.8.jar"
+    )
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -151,6 +144,8 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_name               : mod_name,
             mod_license            : mod_license,
             mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
     ]
     inputs.properties replaceProperties
     expand replaceProperties
