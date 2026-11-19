@@ -196,8 +196,9 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             return;
         }
 
-        int nameY = top - 10;
-        int distanceY = showNames ? top - 20 : top - 10;
+        // 给定位点上方的高度箭头留出空间，避免箭头与名字重叠
+        int nameY = top - 15;
+        int distanceY = showNames ? top - 25 : top - 15;
 
         for (Marker marker : markers) {
             int centerX = marker.x + MARKER_SIZE / 2;
