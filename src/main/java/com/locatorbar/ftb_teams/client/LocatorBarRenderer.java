@@ -60,7 +60,10 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
 
         int centerX = left + barWidth / 2;
         int maxOffset = barWidth / 2 - EDGE_PADDING;
-        float range = Math.max(1.0F, ClientConfig.MAX_RANGE.get());
+        double configuredRange = ClientConfig.MAX_RANGE.get();
+        // 0 = 不限制客户端距离，也不做距离淡出
+        boolean unlimitedRange = configuredRange <= 0.0D;
+        float range = unlimitedRange ? Float.MAX_VALUE : (float) configuredRange;
 
         List<Marker> markers = new ArrayList<>();
         for (ClientTeamPositions.TrackedPlayer tracked : snapshot.players()) {
@@ -85,7 +88,7 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             int yShift = Mth.clamp((int) Math.round(-dy / 24.0D), -2, 2);
             int markerCenterY = top + BAR_HEIGHT / 2 + yShift;
 
-            float fade = Mth.clamp((float) (distance / range), 0.0F, 1.0F);
+            float fade = unlimitedRange ? 0.0F : Mth.clamp((float) (distance / range), 0.0F, 1.0F);
             int alpha = (int) (255.0F - fade * 150.0F);
             if (behind) {
                 alpha = (int) (alpha * 0.55F);

@@ -63,8 +63,11 @@ public final class ClientTeamPositions {
         int color = teamColor(selfTeam);
 
         boolean onlySameTeam = ClientConfig.ONLY_SAME_TEAM.get();
-        double maxRange = ClientConfig.MAX_RANGE.get();
-        double maxRangeSquared = maxRange * maxRange;
+        double configuredRange = ClientConfig.MAX_RANGE.get();
+        // 0 或负数表示客户端不限制距离；实际可见范围仍由客户端已同步的数据决定
+        double maxRangeSquared = configuredRange <= 0.0D
+                ? Double.MAX_VALUE
+                : configuredRange * configuredRange;
 
         Map<UUID, TrackedPlayer> found = new LinkedHashMap<>();
 
@@ -137,12 +140,13 @@ public final class ClientTeamPositions {
         teamColor = color;
         SmoothAngles.retain(found.keySet());
 
-        debug("selfTeam={}, selfTeamId={}, teamMembers={}, levelPlayers={}, ftbChunksPositions={}, visible={}",
+        debug("selfTeam={}, selfTeamId={}, teamMembers={}, levelPlayers={}, ftbChunksPositions={}, maxRange={}, visible={}",
                 selfTeam == null ? "none" : selfTeam.getId(),
                 selfTeamId,
                 teamMembers.size(),
                 minecraft.level.players().size(),
                 ftbChunksPositions,
+                configuredRange <= 0.0D ? "unlimited" : configuredRange,
                 players.size());
     }
 

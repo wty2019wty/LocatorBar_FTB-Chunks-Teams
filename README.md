@@ -68,7 +68,7 @@ FTB Teams 只同步队伍关系，不同步玩家坐标。因此本模组使用�
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `enabled` | `true` | 是否渲染定位条。 |
-| `maxRange` | `256` | 最大显示距离，单位方块。 |
+| `maxRange` | `0` | 最大显示距离，单位方块。`0` 表示客户端不限制距离；实际范围仍受服务端实体追踪和 FTB Chunks 同步范围限制。 |
 | `onlySameTeam` | `true` | 是否只显示同一 FTB Teams 队伍的玩家。改为 `false` 可显示客户端已知的所有玩家。 |
 | `useFtbChunks` | `true` | 安装 FTB Chunks 时是否使用其长距离玩家位置。 |
 | `showNames` | `false` | 是否在圆点上方显示玩家名字。 |
@@ -104,10 +104,10 @@ build/libs/locatorbar_ftb_teams-0.1.0.jar
 ## 工作原理
 
 1. 每个客户端 tick：
-   - 从 `ClientTeamManager` 获取自己的队伍 ID 和队伍颜色；
+   - 从 `ClientTeamManager` 获取自己的队伍成员、队伍 ID 和队伍颜色；
    - 遍历 `Minecraft.getInstance().level.players()` 获取已加载玩家实体位置；
    - 如果启用 FTB Chunks 集成，读取其客户端长距离追踪位置作为补充；
-   - 按队伍、维度（仅当前维度）、距离过滤。
+   - 默认不再按距离过滤，按队伍和当前维度过滤后全部显示。
 2. 在 `RegisterGuiLayersEvent` 注册的 HUD 层中绘制定位条。
 3. 不做任何服务端同步，因此不需要服务端安装，也不会增加服务端网络负担。
 

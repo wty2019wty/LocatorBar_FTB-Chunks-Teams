@@ -13,9 +13,11 @@ public final class ClientConfig {
             .define("enabled", true);
 
     public static final ModConfigSpec.IntValue MAX_RANGE = BUILDER
-            .comment("定位条显示的最大距离（单位：方块）。",
-                    "Maximum distance in blocks at which players are shown.")
-            .defineInRange("maxRange", 256, 16, 4096);
+            .comment("定位条显示的最大距离（单位：方块）。0 表示不限制。",
+                    "Maximum distance in blocks at which players are shown.",
+                    "0 means no client-side distance limit. The actual range is still",
+                    "limited by what the server/FTB Chunks has synchronized to the client.")
+            .defineInRange("maxRange", 0, 0, 1000000);
 
     public static final ModConfigSpec.BooleanValue ONLY_SAME_TEAM = BUILDER
             .comment("是否只显示同一 FTB Teams 队伍的玩家。",
