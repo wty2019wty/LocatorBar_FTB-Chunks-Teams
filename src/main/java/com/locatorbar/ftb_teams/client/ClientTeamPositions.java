@@ -1,5 +1,6 @@
 package com.locatorbar.ftb_teams.client;
 
+import com.locatorbar.ftb_teams.LocatorBarMod;
 import dev.ftb.mods.ftblibrary.icon.Color4I;
 import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
 import dev.ftb.mods.ftbteams.api.Team;
@@ -13,6 +14,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -28,6 +30,7 @@ import java.util.UUID;
 public final class ClientTeamPositions {
     private static List<TrackedPlayer> players = List.of();
     private static int teamColor = 0xFFFFFF;
+    private static long lastDebugLog;
 
     private ClientTeamPositions() {
     }
@@ -44,14 +47,20 @@ public final class ClientTeamPositions {
 
         FTBTeamsAPI.API api = FTBTeamsAPI.api();
         if (api == null || !api.isClientManagerLoaded()) {
+            debug("FTB Teams 客户端队伍管理器尚未加载");
             clear();
             return;
         }
 
         ClientTeamManager manager = api.getClientManager();
-        KnownClientPlayer self = manager.getKnownPlayer(minecraft.player.getUUID()).orElse(manager.self());
-        UUID selfTeamId = self == null ? null : self.teamId();
-        int color = teamColor(manager.selfTeam());
+        Team selfTeam = manager.selfTeam();
+        UUID selfTeamId = selfTeam == null ? null : selfTeam.getTeamId();
+        if (selfTeamId == null) {
+            KnownClientPlayer self = manager.getKnownPlayer(minecraft.player.getUUID()).orElse(manager.self());
+            selfTeamId = self == null ? null : self.teamId();
+        }
+        Set<UUID> teamMembers = selfTeam == null ? Set.of() : selfTeam.getMembers();
+        int color = teamColor(selfTeam);
 
         boolean onlySameTeam = ClientConfig.ONLY_SAME_TEAM.get();
         double maxRange = ClientConfig.MAX_RANGE.get();
@@ -64,7 +73,7 @@ public final class ClientTeamPositions {
             if (other == minecraft.player) {
                 continue;
             }
-            if (onlySameTeam && !isSameTeam(manager, other.getUUID(), selfTeamId)) {
+            if (onlySameTeam && !isSameTeam(manager, other.getUUID(), selfTeamId, teamMembers)) {
                 continue;
             }
 
@@ -86,13 +95,16 @@ public final class ClientTeamPositions {
         }
 
         // 2) FTB Chunks 长距离追踪：仅补充原版实体范围外的玩家
+        int ftbChunksPositions = 0;
         if (ClientConfig.USE_FTB_CHUNKS.get()) {
-            for (Map.Entry<UUID, Vec3> entry : FtbChunksIntegration.trackedPositions().entrySet()) {
+            Map<UUID, Vec3> trackedPositions = FtbChunksIntegration.trackedPositions();
+            ftbChunksPositions = trackedPositions.size();
+            for (Map.Entry<UUID, Vec3> entry : trackedPositions.entrySet()) {
                 UUID playerId = entry.getKey();
                 if (playerId.equals(minecraft.player.getUUID()) || found.containsKey(playerId)) {
                     continue;
                 }
-                if (onlySameTeam && !isSameTeam(manager, playerId, selfTeamId)) {
+                if (onlySameTeam && !isSameTeam(manager, playerId, selfTeamId, teamMembers)) {
                     continue;
                 }
 
@@ -124,6 +136,26 @@ public final class ClientTeamPositions {
         players = List.copyOf(found.values());
         teamColor = color;
         SmoothAngles.retain(found.keySet());
+
+        debug("selfTeam={}, selfTeamId={}, teamMembers={}, levelPlayers={}, ftbChunksPositions={}, visible={}",
+                selfTeam == null ? "none" : selfTeam.getId(),
+                selfTeamId,
+                teamMembers.size(),
+                minecraft.level.players().size(),
+                ftbChunksPositions,
+                players.size());
+    }
+
+    private static void debug(String format, Object... args) {
+        if (!ClientConfig.DEBUG.get()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastDebugLog < 5000L) {
+            return;
+        }
+        lastDebugLog = now;
+        LocatorBarMod.LOGGER.info("[LocatorBar] " + format, args);
     }
 
     public static void clear() {
@@ -136,7 +168,10 @@ public final class ClientTeamPositions {
         return new Snapshot(players, teamColor);
     }
 
-    private static boolean isSameTeam(ClientTeamManager manager, UUID playerId, UUID selfTeamId) {
+    private static boolean isSameTeam(ClientTeamManager manager, UUID playerId, UUID selfTeamId, Set<UUID> teamMembers) {
+        if (teamMembers.contains(playerId)) {
+            return true;
+        }
         if (selfTeamId == null) {
             return false;
         }

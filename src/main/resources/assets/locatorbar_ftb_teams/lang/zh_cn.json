@@ -11,5 +11,6 @@
   "locatorbar_ftb_teams.configuration.showNames": "显示玩家名字",
   "locatorbar_ftb_teams.configuration.barWidth": "定位条宽度",
   "locatorbar_ftb_teams.configuration.yOffset": "垂直偏移",
-  "locatorbar_ftb_teams.configuration.scale": "缩放比例"
+  "locatorbar_ftb_teams.configuration.scale": "缩放比例",
+  "locatorbar_ftb_teams.configuration.debug": "调试日志"
 }

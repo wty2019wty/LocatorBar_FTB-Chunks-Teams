@@ -47,6 +47,11 @@ public final class ClientConfig {
             .comment("定位条整体缩放比例。", "Scale of the locator bar.")
             .defineInRange("scale", 1.0D, 0.5D, 2.0D);
 
+    public static final ModConfigSpec.BooleanValue DEBUG = BUILDER
+            .comment("在日志中输出定位条调试信息（队伍成员数、可见玩家数、FTB Chunks 位置数）。",
+                    "Log locator bar diagnostics: team member count, visible players, FTB Chunks positions.")
+            .define("debug", false);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
     private ClientConfig() {

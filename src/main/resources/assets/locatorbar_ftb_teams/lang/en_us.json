@@ -11,5 +11,6 @@
   "locatorbar_ftb_teams.configuration.showNames": "Show Names",
   "locatorbar_ftb_teams.configuration.barWidth": "Bar Width",
   "locatorbar_ftb_teams.configuration.yOffset": "Vertical Offset",
-  "locatorbar_ftb_teams.configuration.scale": "Scale"
+  "locatorbar_ftb_teams.configuration.scale": "Scale",
+  "locatorbar_ftb_teams.configuration.debug": "Debug Logging"
 }
