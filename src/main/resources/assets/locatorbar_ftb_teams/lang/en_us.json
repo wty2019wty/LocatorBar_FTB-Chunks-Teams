@@ -1,0 +1,13 @@
+{
+  "itemGroup.locatorbar_ftb_teams": "LocatorBar_FTB-Teams Tab",
+  "block.locatorbar_ftb_teams.example_block": "Example Block",
+  "item.locatorbar_ftb_teams.example_item": "Example Item",
+
+  "locatorbar_ftb_teams.configuration.title": "LocatorBar_FTB-Teams Configs",
+  "locatorbar_ftb_teams.configuration.section.locatorbar_ftb_teams.common.toml": "LocatorBar_FTB-Teams Configs",
+  "locatorbar_ftb_teams.configuration.section.locatorbar_ftb_teams.common.toml.title": "LocatorBar_FTB-Teams Configs",
+  "locatorbar_ftb_teams.configuration.items": "Item List",
+  "locatorbar_ftb_teams.configuration.logDirtBlock": "Log Dirt Block",
+  "locatorbar_ftb_teams.configuration.magicNumberIntroduction": "Magic Number Text",
+  "locatorbar_ftb_teams.configuration.magicNumber": "Magic Number"
+}
