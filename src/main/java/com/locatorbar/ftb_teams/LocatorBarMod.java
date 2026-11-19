@@ -19,7 +19,7 @@ import org.slf4j.Logger;
  */
 @Mod(LocatorBarMod.MODID)
 public class LocatorBarMod {
-    public static final String MODID = "locatorbar_ftb_teams";
+    public static final String MODID = "locatorbar_ftb_chunks_teams";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public LocatorBarMod() {

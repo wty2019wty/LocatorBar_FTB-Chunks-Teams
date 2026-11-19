@@ -1,5 +1,6 @@
 package com.locatorbar.ftb_teams.client;
 
+import com.locatorbar.ftb_teams.LocatorBarMod;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
@@ -29,7 +30,7 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
     private static final int ARROW_SIZE = 20;
 
     private static final ResourceLocation ARROW_TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            "locatorbar_ftb_teams", "textures/gui/arrow_right_alt.png");
+            LocatorBarMod.MODID, "textures/gui/arrow_right_alt.png");
 
     private static final int[] PLAYER_COLORS = {
             0xE53935, 0xFB8C00, 0xFDD835, 0x7CB342,
@@ -251,7 +252,7 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
 
             if (showDistance) {
                 Component distanceText = Component.translatable(
-                        "locatorbar_ftb_teams.distance",
+                        LocatorBarMod.MODID + ".distance",
                         formatDistance(marker.distance)
                 );
                 int textWidth = minecraft.font.width(distanceText);

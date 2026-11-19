@@ -67,7 +67,7 @@ FTB Teams 只同步队伍关系，不同步玩家坐标。因此本模组使用�
 
 ## 配置
 
-配置文件：`config/locatorbar_ftb_teams-client.toml`
+配置文件：`config/locatorbar_ftb_chunks_teams-client.toml`
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
@@ -97,7 +97,7 @@ FTB Teams 只同步队伍关系，不同步玩家坐标。因此本模组使用�
 构建产物：
 
 ```text
-build/libs/locatorbar_ftb_teams-0.1.1-beta.0.jar
+build/libs/locatorbar_ftb_chunks_teams-*.jar
 ```
 
 开发环境客户端：

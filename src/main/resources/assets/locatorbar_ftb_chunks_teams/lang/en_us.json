@@ -1,0 +1,18 @@
+{
+  "locatorbar_ftb_chunks_teams.configuration.title": "LocatorBar_FTB-Chunks-Teams",
+
+  "locatorbar_ftb_chunks_teams.configuration.section.locatorbar_ftb_chunks_teams.client.toml": "Client Settings",
+  "locatorbar_ftb_chunks_teams.configuration.section.locatorbar_ftb_chunks_teams.client.toml.title": "Client Settings",
+
+  "locatorbar_ftb_chunks_teams.configuration.enabled": "Enable Locator Bar",
+  "locatorbar_ftb_chunks_teams.configuration.maxRange": "Maximum Range (blocks)",
+  "locatorbar_ftb_chunks_teams.configuration.onlySameTeam": "Only Show Same Team",
+  "locatorbar_ftb_chunks_teams.configuration.useFtbChunks": "Use FTB Chunks Positions",
+  "locatorbar_ftb_chunks_teams.configuration.showNames": "Show Names",
+  "locatorbar_ftb_chunks_teams.configuration.showDistance": "Show Distance",
+  "locatorbar_ftb_chunks_teams.distance": "%s m",
+  "locatorbar_ftb_chunks_teams.configuration.barWidth": "Bar Width",
+  "locatorbar_ftb_chunks_teams.configuration.yOffset": "Vertical Offset",
+  "locatorbar_ftb_chunks_teams.configuration.scale": "Scale",
+  "locatorbar_ftb_chunks_teams.configuration.debug": "Debug Logging"
+}
