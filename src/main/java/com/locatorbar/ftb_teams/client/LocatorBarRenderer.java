@@ -1,7 +1,6 @@
 package com.locatorbar.ftb_teams.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -91,11 +90,13 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             int yShift = Mth.clamp((int) Math.round(-dy / 24.0D), -2, 2);
             int markerCenterY = top + BAR_HEIGHT / 2 + yShift;
 
-            // 矢量方向：水平分量与定位条位置一致（-1 左，+1 右），
-            // 垂直分量由仰角得出（+1 正上方，-1 正下方）
+            // 矢量方向：把目标的三维相对方向投影到“屏幕右 / 世界上”两个轴上
+            // 水平分量：-1 左，+1 右；垂直分量：-1 正下方，+1 正上方
             double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
             float pitch = (float) (Math.atan2(dy, horizontalDistance) * (180.0D / Math.PI));
-            float horizontal = Mth.clamp(angle, -90.0F, 90.0F) / 90.0F;
+            float horizontal = horizontalDistance < 0.5D
+                    ? 0.0F
+                    : Mth.clamp(angle, -90.0F, 90.0F) / 90.0F;
             float vertical = Mth.clamp(pitch, -90.0F, 90.0F) / 90.0F;
 
             float fade = unlimitedRange ? 0.0F : Mth.clamp((float) (distance / range), 0.0F, 1.0F);
@@ -179,40 +180,53 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
     /**
      * 以圆点为原点绘制一个指向目标真实相对方向的箭头。
      * <p>
-     * 水平分量对应目标左右方位，垂直分量对应目标仰角，
-     * 因此箭头可以表示“右上方”“左下方”“正上方”等任意矢量方向。
+     * 水平分量对应目标左右方位，垂直分量对应目标仰角。
+     * 这里直接按二维方向逐像素绘制，因此箭头可以指向任意连续角度，
+     * 而不是只在上下左右几个固定方向之间切换。
      */
     private static void drawDirectionArrow(GuiGraphics graphics, Marker marker) {
         double horizontal = marker.horizontal;
         double vertical = marker.vertical;
         double length = Math.sqrt(horizontal * horizontal + vertical * vertical);
         // 目标几乎在正前方且同一高度时，方向没有意义，不绘制箭头
-        if (length < 0.12D) {
+        if (length < 0.10D) {
             return;
         }
 
-        int color = withAlpha(marker.color, Math.max(140, marker.alpha));
+        // 屏幕坐标系：右为 +x，下为 +y；vertical 向上为正，因此取负
+        double ux = horizontal / length;
+        double uy = -vertical / length;
+
         int centerX = marker.x + MARKER_SIZE / 2;
         int centerY = marker.y + MARKER_SIZE / 2;
+        int color = withAlpha(marker.color, Math.max(150, marker.alpha));
 
-        // 水平向右为 +x，垂直向上为 +y；旋转 0° 表示箭头朝上
-        float rotation = (float) Math.toDegrees(Math.atan2(horizontal, vertical));
+        double start = MARKER_SIZE / 2.0 + 1.5D;
+        double end = 13.0D;
 
-        PoseStack pose = graphics.pose();
-        pose.pushPose();
-        pose.translate(centerX, centerY, 0.0F);
-        pose.mulPose(Axis.ZP.rotationDegrees(rotation));
+        // 杆：沿方向逐像素采样，保证任意角度都连续，不依赖 pose 旋转
+        for (double t = start; t <= end - 3.5D; t += 0.4D) {
+            int px = (int) Math.round(centerX + ux * t);
+            int py = (int) Math.round(centerY + uy * t);
+            graphics.fill(px - 1, py - 1, px + 1, py + 1, color);
+        }
 
-        // 局部坐标：0 在圆点中心，-y 为箭头指向方向
-        // 箭头从圆点边缘外侧开始，避免覆盖圆点本身
-        int tailY = -(MARKER_SIZE / 2 + 1);
-        int tipY = tailY - 6;
-        graphics.fill(-1, tipY + 3, 1, tailY, color);
-        graphics.fill(-2, tipY + 2, 2, tipY + 3, color);
-        graphics.fill(-3, tipY + 1, 3, tipY + 2, color);
-        graphics.fill(-1, tipY, 1, tipY + 1, color);
-
-        pose.popPose();
+        // 头部：从尖端向后张开的两条边，形成 V 形箭头
+        double wx = -uy;
+        double wy = ux;
+        for (int i = 0; i <= 4; i++) {
+            double back = end - i;
+            int bx = (int) Math.round(centerX + ux * back);
+            int by = (int) Math.round(centerY + uy * back);
+            for (int j = 0; j <= i; j++) {
+                int lx = (int) Math.round(bx + wx * j);
+                int ly = (int) Math.round(by + wy * j);
+                int rx = (int) Math.round(bx - wx * j);
+                int ry = (int) Math.round(by - wy * j);
+                graphics.fill(lx, ly, lx + 1, ly + 1, color);
+                graphics.fill(rx, ry, rx + 1, ry + 1, color);
+            }
+        }
     }
 
     private static void drawLabels(GuiGraphics graphics, Minecraft minecraft, List<Marker> markers, int top, int screenWidth) {
@@ -222,9 +236,9 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             return;
         }
 
-        // 给定位点上方的高度箭头留出空间，避免箭头与名字重叠
-        int nameY = top - 15;
-        int distanceY = showNames ? top - 25 : top - 15;
+        // 给定位点上方的向量箭头留出空间，避免箭头与名字重叠
+        int nameY = top - 24;
+        int distanceY = showNames ? top - 34 : top - 24;
 
         for (Marker marker : markers) {
             int centerX = marker.x + MARKER_SIZE / 2;
