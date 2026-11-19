@@ -9,6 +9,8 @@
   "locatorbar_ftb_teams.configuration.onlySameTeam": "仅显示同队玩家",
   "locatorbar_ftb_teams.configuration.useFtbChunks": "使用 FTB Chunks 位置",
   "locatorbar_ftb_teams.configuration.showNames": "显示玩家名字",
+  "locatorbar_ftb_teams.configuration.showDistance": "显示相对距离",
+  "locatorbar_ftb_teams.distance": "%s 格",
   "locatorbar_ftb_teams.configuration.barWidth": "定位条宽度",
   "locatorbar_ftb_teams.configuration.yOffset": "垂直偏移",
   "locatorbar_ftb_teams.configuration.scale": "缩放比例",

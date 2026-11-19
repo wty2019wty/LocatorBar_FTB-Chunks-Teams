@@ -34,7 +34,12 @@ public final class ClientConfig {
 
     public static final ModConfigSpec.BooleanValue SHOW_NAMES = BUILDER
             .comment("是否在定位点上方显示玩家名字。", "Whether to show player names above the markers.")
-            .define("showNames", false);
+            .define("showNames", true);
+
+    public static final ModConfigSpec.BooleanValue SHOW_DISTANCE = BUILDER
+            .comment("是否在玩家名字上方显示直线相对距离。",
+                    "Whether to show the straight-line distance above the player name.")
+            .define("showDistance", true);
 
     public static final ModConfigSpec.IntValue BAR_WIDTH = BUILDER
             .comment("定位条宽度（单位：GUI 像素）。", "Width of the locator bar in GUI pixels.")

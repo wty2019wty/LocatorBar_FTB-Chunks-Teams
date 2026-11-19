@@ -5,11 +5,13 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.LayeredDraw;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -104,7 +106,9 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
                     markerCenterX - MARKER_SIZE / 2,
                     markerCenterY - MARKER_SIZE / 2,
                     playerColor(tracked.id()),
-                    alpha
+                    alpha,
+                    distance,
+                    dy
             ));
         }
 
@@ -130,9 +134,7 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             drawMarker(graphics, marker);
         }
 
-        if (ClientConfig.SHOW_NAMES.get()) {
-            drawNames(graphics, minecraft, markers, top, screenWidth);
-        }
+        drawLabels(graphics, minecraft, markers, top, screenWidth);
 
         pose.popPose();
     }
@@ -161,20 +163,72 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
                 withAlpha(0x000000, outlineAlpha));
         graphics.fill(marker.x, marker.y, marker.x + MARKER_SIZE, marker.y + MARKER_SIZE,
                 withAlpha(marker.color, marker.alpha));
+
+        // 用上下小箭头表示相对高度关系
+        if (marker.verticalDelta > 2.0D) {
+            drawVerticalArrow(graphics, marker, true);
+        } else if (marker.verticalDelta < -2.0D) {
+            drawVerticalArrow(graphics, marker, false);
+        }
     }
 
-    private static void drawNames(GuiGraphics graphics, Minecraft minecraft, List<Marker> markers, int top, int screenWidth) {
-        for (Marker marker : markers) {
-            String name = marker.entry.name();
-            if (name.isBlank()) {
-                continue;
-            }
-            int textWidth = minecraft.font.width(name);
-            int textX = Mth.clamp(marker.x + MARKER_SIZE / 2 - textWidth / 2, 2, screenWidth - textWidth - 2);
-            int textY = top - 11;
-            graphics.drawString(minecraft.font, name, textX, textY,
-                    withAlpha(0xFFFFFF, Math.min(255, marker.alpha + 25)), true);
+    private static void drawVerticalArrow(GuiGraphics graphics, Marker marker, boolean up) {
+        int color = withAlpha(marker.color, Math.max(120, marker.alpha));
+        int centerX = marker.x + MARKER_SIZE / 2;
+
+        if (up) {
+            int y = marker.y - 5;
+            graphics.fill(centerX, y, centerX + 1, y + 1, color);
+            graphics.fill(centerX - 1, y + 1, centerX + 2, y + 2, color);
+            graphics.fill(centerX - 2, y + 2, centerX + 3, y + 3, color);
+        } else {
+            int y = marker.y + MARKER_SIZE + 2;
+            graphics.fill(centerX - 2, y, centerX + 3, y + 1, color);
+            graphics.fill(centerX - 1, y + 1, centerX + 2, y + 2, color);
+            graphics.fill(centerX, y + 2, centerX + 1, y + 3, color);
         }
+    }
+
+    private static void drawLabels(GuiGraphics graphics, Minecraft minecraft, List<Marker> markers, int top, int screenWidth) {
+        boolean showNames = ClientConfig.SHOW_NAMES.get();
+        boolean showDistance = ClientConfig.SHOW_DISTANCE.get();
+        if (!showNames && !showDistance) {
+            return;
+        }
+
+        int nameY = top - 10;
+        int distanceY = showNames ? top - 20 : top - 10;
+
+        for (Marker marker : markers) {
+            int centerX = marker.x + MARKER_SIZE / 2;
+            int alpha = Math.min(255, marker.alpha + 25);
+
+            if (showNames) {
+                String name = marker.entry.name();
+                if (!name.isBlank()) {
+                    int textWidth = minecraft.font.width(name);
+                    int textX = Mth.clamp(centerX - textWidth / 2, 2, screenWidth - textWidth - 2);
+                    graphics.drawString(minecraft.font, name, textX, nameY, withAlpha(0xFFFFFF, alpha), true);
+                }
+            }
+
+            if (showDistance) {
+                Component distanceText = Component.translatable(
+                        "locatorbar_ftb_teams.distance",
+                        formatDistance(marker.distance)
+                );
+                int textWidth = minecraft.font.width(distanceText);
+                int textX = Mth.clamp(centerX - textWidth / 2, 2, screenWidth - textWidth - 2);
+                graphics.drawString(minecraft.font, distanceText, textX, distanceY, withAlpha(0xFFD54F, alpha), true);
+            }
+        }
+    }
+
+    private static String formatDistance(double distance) {
+        if (distance < 10.0D) {
+            return String.format(Locale.ROOT, "%.1f", distance);
+        }
+        return String.format(Locale.ROOT, "%.0f", distance);
     }
 
     /**
@@ -230,13 +284,18 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
         private final int y;
         private final int color;
         private final int alpha;
+        private final double distance;
+        private final double verticalDelta;
 
-        private Marker(ClientTeamPositions.TrackedPlayer entry, int x, int y, int color, int alpha) {
+        private Marker(ClientTeamPositions.TrackedPlayer entry, int x, int y, int color, int alpha,
+                       double distance, double verticalDelta) {
             this.entry = entry;
             this.x = x;
             this.y = y;
             this.color = color;
             this.alpha = alpha;
+            this.distance = distance;
+            this.verticalDelta = verticalDelta;
         }
     }
 }
