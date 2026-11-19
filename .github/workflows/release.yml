@@ -3,12 +3,14 @@ name: Release
 on:
   push:
     tags:
+      # 同时支持 v0.1.1 与 0.1.1 / 0.1.1-beta.0 两种标签形式
       - 'v*'
+      - '[0-9]*'
   # 允许手动补发某个已有标签的 Release
   workflow_dispatch:
     inputs:
       tag:
-        description: '要发布的标签，例如 v0.1.0（标签需已存在）'
+        description: '要发布的标签，例如 0.1.1-beta.0 或 v0.1.1-beta.0（标签需已存在）'
         required: true
         type: string
 
@@ -26,6 +28,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # 手动触发时优先检出输入标签对应的提交，避免用默认分支的代码构建
+          ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
 
       - name: Set up JDK 21
