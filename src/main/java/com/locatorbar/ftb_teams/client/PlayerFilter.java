@@ -146,12 +146,50 @@ public final class PlayerFilter {
         });
 
         if (hidden) {
-            if (playerId == null) {
-                entries.add(playerName);
-            } else if (playerName == null || playerName.isBlank()) {
-                entries.add(playerId.toString());
-            } else {
-                entries.add(playerId + "|" + playerName);
+            String entry = hiddenEntry(playerId, playerName);
+            if (entry != null) {
+                entries.add(entry);
+            }
+        }
+
+        save(entries);
+    }
+
+    /**
+     * 独显：只保留选中的玩家可见，把候选列表里的其他玩家全部加入隐藏名单。
+     * 不在当前候选列表中的旧隐藏记录会保留，避免它们以后进入范围时突然出现。
+     */
+    public static void showOnly(Candidate selected) {
+        List<Candidate> candidates = candidates();
+        List<String> entries = new ArrayList<>(ClientConfig.HIDDEN_PLAYERS.get());
+        String selectedIdentity = selected.identity();
+
+        // 先移除所有与“选中玩家”或“其他候选玩家”相关的旧记录，
+        // 再按当前候选列表重新写入，避免同名/同 UUID 的重复项越积越多。
+        entries.removeIf(raw -> {
+            Entry entry = parse(raw);
+            if (entry == null) {
+                return false;
+            }
+            if (entry.matches(selected.uuid(), selected.name())) {
+                return true;
+            }
+            for (Candidate candidate : candidates) {
+                if (!candidate.identity().equals(selectedIdentity)
+                        && entry.matches(candidate.uuid(), candidate.name())) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        for (Candidate candidate : candidates) {
+            if (candidate.identity().equals(selectedIdentity)) {
+                continue;
+            }
+            String entry = hiddenEntry(candidate.uuid(), candidate.name());
+            if (entry != null) {
+                entries.add(entry);
             }
         }
 
@@ -160,6 +198,17 @@ public final class PlayerFilter {
 
     public static void clear() {
         save(List.of());
+    }
+
+    @Nullable
+    private static String hiddenEntry(@Nullable UUID playerId, @Nullable String playerName) {
+        boolean hasName = playerName != null
+                && !playerName.isBlank()
+                && !"?".equals(playerName);
+        if (playerId == null) {
+            return hasName ? playerName.trim() : null;
+        }
+        return hasName ? playerId + "|" + playerName.trim() : playerId.toString();
     }
 
     private static void save(List<String> entries) {

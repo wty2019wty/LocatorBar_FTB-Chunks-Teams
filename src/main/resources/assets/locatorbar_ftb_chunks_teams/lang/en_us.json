@@ -24,6 +24,8 @@
   "locatorbar_ftb_chunks_teams.filter.hint": "Hidden players are saved in the client config",
   "locatorbar_ftb_chunks_teams.filter.hide": "Hide",
   "locatorbar_ftb_chunks_teams.filter.show": "Show",
+  "locatorbar_ftb_chunks_teams.filter.solo": "Solo",
+  "locatorbar_ftb_chunks_teams.filter.solo.tooltip": "Show only this player and hide everyone else",
   "locatorbar_ftb_chunks_teams.filter.show_all": "Show All",
   "locatorbar_ftb_chunks_teams.filter.empty": "No players to manage right now",
   "locatorbar_ftb_chunks_teams.filter.source.vanilla": "Vanilla entity tracking",

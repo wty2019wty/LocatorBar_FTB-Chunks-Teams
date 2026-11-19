@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.network.chat.Component;
@@ -33,6 +34,16 @@ public final class PlayerFilterList extends ContainerObjectSelectionList<PlayerF
         this.clampScrollAmount();
     }
 
+    /**
+     * 名单发生变化后刷新过滤缓存和所有按钮文字，不重建列表以保留滚动位置。
+     */
+    public void updateFilter() {
+        this.filter = PlayerFilter.load();
+        for (PlayerEntry entry : this.children()) {
+            entry.refreshButton();
+        }
+    }
+
     @Override
     public int getRowWidth() {
         return Math.min(420, this.width - 20);
@@ -41,6 +52,7 @@ public final class PlayerFilterList extends ContainerObjectSelectionList<PlayerF
     public final class PlayerEntry extends ContainerObjectSelectionList.Entry<PlayerEntry> {
         private final PlayerFilter.Candidate candidate;
         private final Button toggleButton;
+        private final Button soloButton;
 
         private PlayerEntry(PlayerFilter.Candidate candidate) {
             this.candidate = candidate;
@@ -48,9 +60,21 @@ public final class PlayerFilterList extends ContainerObjectSelectionList<PlayerF
                 boolean hidden = PlayerFilterList.this.filter.isHidden(
                         this.candidate.uuid(), this.candidate.name());
                 PlayerFilter.setHidden(this.candidate.uuid(), this.candidate.name(), !hidden);
-                PlayerFilterList.this.filter = PlayerFilter.load();
-                button.setMessage(label());
-            }).bounds(0, 0, 70, 20).build();
+                PlayerFilterList.this.updateFilter();
+            }).bounds(0, 0, 60, 20).build();
+
+            this.soloButton = Button.builder(
+                    Component.translatable("locatorbar_ftb_chunks_teams.filter.solo"),
+                    button -> {
+                        PlayerFilter.showOnly(this.candidate);
+                        PlayerFilterList.this.updateFilter();
+                    })
+                    .bounds(0, 0, 60, 20)
+                    .tooltip(Tooltip.create(Component.translatable(
+                            "locatorbar_ftb_chunks_teams.filter.solo.tooltip")))
+                    .build();
+            // 只对当前能被定位条追踪的玩家开放“独显”
+            this.soloButton.active = candidate.tracked();
         }
 
         private Component label() {
@@ -59,6 +83,11 @@ public final class PlayerFilterList extends ContainerObjectSelectionList<PlayerF
             return Component.translatable(hidden
                     ? "locatorbar_ftb_chunks_teams.filter.show"
                     : "locatorbar_ftb_chunks_teams.filter.hide");
+        }
+
+        private void refreshButton() {
+            this.toggleButton.setMessage(label());
+            this.soloButton.active = this.candidate.tracked();
         }
 
         @Override
@@ -70,16 +99,20 @@ public final class PlayerFilterList extends ContainerObjectSelectionList<PlayerF
 
             String name = this.candidate.displayName();
             String trimmedName = PlayerFilterList.this.minecraft.font.plainSubstrByWidth(
-                    name, Math.max(20, width - 92));
+                    name, Math.max(20, width - 136));
             graphics.drawString(PlayerFilterList.this.minecraft.font, trimmedName,
                     left + 4, top + 5, textColor, false);
 
-            graphics.drawString(PlayerFilterList.this.minecraft.font, sourceText(this.candidate),
+            String source = PlayerFilterList.this.minecraft.font.plainSubstrByWidth(
+                    sourceText(this.candidate), Math.max(20, width - 136));
+            graphics.drawString(PlayerFilterList.this.minecraft.font, source,
                     left + 4, top + 17, 0x777777, false);
 
-            int buttonX = left + width - 74;
             int buttonY = top + (height - 20) / 2;
-            this.toggleButton.setPosition(buttonX, buttonY);
+            this.soloButton.setPosition(left + width - 128, buttonY);
+            this.soloButton.render(graphics, mouseX, mouseY, partialTick);
+
+            this.toggleButton.setPosition(left + width - 64, buttonY);
             this.toggleButton.render(graphics, mouseX, mouseY, partialTick);
         }
 
@@ -97,12 +130,12 @@ public final class PlayerFilterList extends ContainerObjectSelectionList<PlayerF
 
         @Override
         public List<? extends GuiEventListener> children() {
-            return List.of(this.toggleButton);
+            return List.of(this.toggleButton, this.soloButton);
         }
 
         @Override
         public List<? extends NarratableEntry> narratables() {
-            return List.of(this.toggleButton);
+            return List.of(this.toggleButton, this.soloButton);
         }
     }
 }

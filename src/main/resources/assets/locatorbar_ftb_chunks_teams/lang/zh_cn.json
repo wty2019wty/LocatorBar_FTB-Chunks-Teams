@@ -24,6 +24,8 @@
   "locatorbar_ftb_chunks_teams.filter.hint": "隐藏名单会保存到客户端配置中",
   "locatorbar_ftb_chunks_teams.filter.hide": "隐藏",
   "locatorbar_ftb_chunks_teams.filter.show": "显示",
+  "locatorbar_ftb_chunks_teams.filter.solo": "独显",
+  "locatorbar_ftb_chunks_teams.filter.solo.tooltip": "只显示该玩家，隐藏其他所有玩家",
   "locatorbar_ftb_chunks_teams.filter.show_all": "全部显示",
   "locatorbar_ftb_chunks_teams.filter.empty": "当前没有可管理的玩家",
   "locatorbar_ftb_chunks_teams.filter.source.vanilla": "原版实体追踪",
