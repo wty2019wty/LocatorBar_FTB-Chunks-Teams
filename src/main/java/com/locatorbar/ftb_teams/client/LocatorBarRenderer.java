@@ -1,14 +1,15 @@
 package com.locatorbar.ftb_teams.client;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.Camera;
+import com.mojang.math.Axis;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.LayeredDraw;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,6 +26,10 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
     private static final int BAR_HEIGHT = 9;
     private static final int EDGE_PADDING = 6;
     private static final int MARKER_SIZE = 5;
+    private static final int ARROW_SIZE = 20;
+
+    private static final ResourceLocation ARROW_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+            "locatorbar_ftb_teams", "textures/gui/arrow_right_alt.png");
 
     private static final int[] PLAYER_COLORS = {
             0xE53935, 0xFB8C00, 0xFDD835, 0x7CB342,
@@ -70,11 +75,6 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
         float range = unlimitedRange ? Float.MAX_VALUE : (float) configuredRange;
 
         List<Marker> markers = new ArrayList<>();
-        Camera camera = minecraft.gameRenderer.getMainCamera();
-        Vec3 cameraPos = camera.getPosition();
-        Vec3 cameraLook = new Vec3(camera.getLookVector());
-        Vec3 cameraUp = new Vec3(camera.getUpVector());
-        Vec3 cameraRight = new Vec3(camera.getLeftVector()).scale(-1.0D);
         for (ClientTeamPositions.TrackedPlayer tracked : snapshot.players()) {
             double dx = tracked.x() - playerX;
             double dy = tracked.y() - playerEyeY;
@@ -97,31 +97,10 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             int yShift = Mth.clamp((int) Math.round(-dy / 24.0D), -2, 2);
             int markerCenterY = top + BAR_HEIGHT / 2 + yShift;
 
-            // 箭头方向：把目标世界坐标投影到当前相机，得到目标在屏幕上的方向
-            // 箭头会从定位点指向队友实体在屏幕上的实际位置
-            Vec3 toTarget = new Vec3(tracked.x(), tracked.y(), tracked.z()).subtract(cameraPos);
-            double forward = toTarget.dot(cameraLook);
-            double screenX = toTarget.dot(cameraRight);
-            double screenY = toTarget.dot(cameraUp);
-            double arrowX;
-            double arrowY;
-            if (forward > 0.0D) {
-                // 目标在相机前方：使用屏幕投影方向（屏幕 y 向下，因此取负）
-                double screenLength = Math.sqrt(screenX * screenX + screenY * screenY);
-                if (screenLength > 1.0E-4D) {
-                    arrowX = screenX / screenLength;
-                    arrowY = -screenY / screenLength;
-                } else {
-                    // 目标正好在屏幕中心，方向没有意义，箭头朝上
-                    arrowX = 0.0D;
-                    arrowY = -1.0D;
-                }
-            } else {
-                // 目标在身后，屏幕上无法表示，退回水平方位雷达方向
-                double theta = Math.toRadians(Mth.wrapDegrees(angle));
-                arrowX = Math.sin(theta);
-                arrowY = -Math.cos(theta);
-            }
+            // 箭头只表示水平方位：正前方朝上，右侧朝右，正后方朝下，左侧朝左
+            double theta = Math.toRadians(Mth.wrapDegrees(angle));
+            double arrowX = Math.sin(theta);
+            double arrowY = -Math.cos(theta);
 
             float fade = unlimitedRange ? 0.0F : Mth.clamp((float) (distance / range), 0.0F, 1.0F);
             int alpha = (int) (255.0F - fade * 150.0F);
@@ -202,17 +181,14 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
     }
 
     /**
-     * 以圆点为原点绘制一个指向目标真实相对方向的箭头。
+     * 在圆点旁边绘制 Material Symbols 风格的箭头，并让它指向目标在屏幕上的实际方向。
      * <p>
-     * 水平分量对应目标左右方位，垂直分量对应目标仰角。
-     * 这里直接按二维方向逐像素绘制，因此箭头可以指向任意连续角度，
-     * 而不是只在上下左右几个固定方向之间切换。
+     * 纹理本身指向右侧（+x），通过姿态旋转把它转到目标方向。
      */
     private static void drawDirectionArrow(GuiGraphics graphics, Marker marker) {
         double ux = marker.arrowX;
         double uy = marker.arrowY;
         double length = Math.sqrt(ux * ux + uy * uy);
-        // 理论上方向向量已经归一化，这里只做保护
         if (length < 0.10D) {
             return;
         }
@@ -221,34 +197,32 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
 
         int centerX = marker.x + MARKER_SIZE / 2;
         int centerY = marker.y + MARKER_SIZE / 2;
-        int color = withAlpha(marker.color, Math.max(150, marker.alpha));
 
-        double start = MARKER_SIZE / 2.0 + 1.5D;
-        double end = 13.0D;
+        // 纹理箭头默认指向 +x（向右），屏幕 y 向下，因此用 atan2(uy, ux) 旋转
+        float rotation = (float) Math.toDegrees(Math.atan2(uy, ux));
 
-        // 杆：沿方向逐像素采样，保证任意角度都连续
-        for (double t = start; t <= end - 3.5D; t += 0.4D) {
-            int px = (int) Math.round(centerX + ux * t);
-            int py = (int) Math.round(centerY + uy * t);
-            graphics.fill(px - 1, py - 1, px + 1, py + 1, color);
-        }
+        // 让箭头的尾部从圆点边缘外开始，避免覆盖圆点
+        double offset = MARKER_SIZE / 2.0D + ARROW_SIZE / 2.0D - 3.0D;
+        double drawX = centerX + ux * offset;
+        double drawY = centerY + uy * offset;
 
-        // 头部：从尖端向后张开的两条边，形成 V 形箭头
-        double wx = -uy;
-        double wy = ux;
-        for (int i = 0; i <= 4; i++) {
-            double back = end - i;
-            int bx = (int) Math.round(centerX + ux * back);
-            int by = (int) Math.round(centerY + uy * back);
-            for (int j = 0; j <= i; j++) {
-                int lx = (int) Math.round(bx + wx * j);
-                int ly = (int) Math.round(by + wy * j);
-                int rx = (int) Math.round(bx - wx * j);
-                int ry = (int) Math.round(by - wy * j);
-                graphics.fill(lx, ly, lx + 1, ly + 1, color);
-                graphics.fill(rx, ry, rx + 1, ry + 1, color);
-            }
-        }
+        int color = marker.color;
+        float red = ((color >> 16) & 0xFF) / 255.0F;
+        float green = ((color >> 8) & 0xFF) / 255.0F;
+        float blue = (color & 0xFF) / 255.0F;
+        float alpha = Math.max(150, marker.alpha) / 255.0F;
+
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.translate(drawX, drawY, 0.0F);
+        pose.mulPose(Axis.ZP.rotationDegrees(rotation));
+        pose.translate(-ARROW_SIZE / 2.0F, -ARROW_SIZE / 2.0F, 0.0F);
+
+        RenderSystem.setShaderColor(red, green, blue, alpha);
+        graphics.blit(ARROW_TEXTURE, 0, 0, 0, 0, ARROW_SIZE, ARROW_SIZE, ARROW_SIZE, ARROW_SIZE);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+
+        pose.popPose();
     }
 
     private static void drawLabels(GuiGraphics graphics, Minecraft minecraft, List<Marker> markers, int top, int screenWidth) {
