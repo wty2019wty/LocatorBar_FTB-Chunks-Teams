@@ -8,6 +8,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
+import net.neoforged.neoforge.client.settings.KeyModifier;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -21,6 +22,8 @@ public final class ClientKeyMappings {
     public static final KeyMapping OPEN_FILTER = new KeyMapping(
             "key.locatorbar_ftb_chunks_teams.open_filter",
             KeyConflictContext.IN_GAME,
+            // 默认组合键：Ctrl + O
+            KeyModifier.CONTROL,
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_O,
             "key.categories.locatorbar_ftb_chunks_teams"
