@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  # 允许手动补发某个已有标签的 Release
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的标签，例如 v0.1.0（标签需已存在）'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Determine tag and version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          # 去掉开头的 v，作为 Gradle 的 mod_version（例如 v0.1.0 -> 0.1.0）
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "发布标签 ${TAG}，构建版本 ${VERSION}"
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # 用标签推导的版本号覆盖 gradle.properties 中的 mod_version，
+      # 使 jar 文件名与 mods.toml 内的版本号都与标签保持一致。
+      - name: Build
+        run: ./gradlew build -Pmod_version="${{ steps.version.outputs.version }}" --no-daemon --stacktrace -Dorg.gradle.jvmargs=-Xmx3G
+
+      - name: Show built files
+        run: ls -l build/libs
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          files: build/libs/*.jar
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          # 版本号带后缀（如 0.2.0-beta.1）时自动标记为预发布
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}

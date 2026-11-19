@@ -1,0 +1,51 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - 'TEMPLATE_LICENSE.txt'
+      - '.gitignore'
+      - '.gitattributes'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # 配置缓存（gradle.properties 中已开启）在 CI 中同样生效；
+      # 适当提高堆内存，避免 ModDevGradle 反编译 Minecraft 时 OOM。
+      - name: Build
+        run: ./gradlew build --no-daemon --stacktrace -Dorg.gradle.jvmargs=-Xmx3G
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: locatorbar-ftb-teams
+          path: build/libs/*.jar
+          if-no-files-found: error
