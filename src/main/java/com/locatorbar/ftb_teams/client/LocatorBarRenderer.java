@@ -1,12 +1,14 @@
 package com.locatorbar.ftb_teams.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.LayeredDraw;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -68,6 +70,11 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
         float range = unlimitedRange ? Float.MAX_VALUE : (float) configuredRange;
 
         List<Marker> markers = new ArrayList<>();
+        Camera camera = minecraft.gameRenderer.getMainCamera();
+        Vec3 cameraPos = camera.getPosition();
+        Vec3 cameraLook = new Vec3(camera.getLookVector());
+        Vec3 cameraUp = new Vec3(camera.getUpVector());
+        Vec3 cameraRight = new Vec3(camera.getLeftVector()).scale(-1.0D);
         for (ClientTeamPositions.TrackedPlayer tracked : snapshot.players()) {
             double dx = tracked.x() - playerX;
             double dy = tracked.y() - playerEyeY;
@@ -90,18 +97,28 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             int yShift = Mth.clamp((int) Math.round(-dy / 24.0D), -2, 2);
             int markerCenterY = top + BAR_HEIGHT / 2 + yShift;
 
-            // 箭头方向：水平面上的相对方位，形成 360° 连续方向指针
-            // 正前方 -> 箭头朝上，右侧 -> 朝右，正后方 -> 朝下，左侧 -> 朝左
-            double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
-            float heading = Mth.wrapDegrees(angle);
+            // 箭头方向：把目标世界坐标投影到当前相机，得到目标在屏幕上的方向
+            // 箭头会从定位点指向队友实体在屏幕上的实际位置
+            Vec3 toTarget = new Vec3(tracked.x(), tracked.y(), tracked.z()).subtract(cameraPos);
+            double forward = toTarget.dot(cameraLook);
+            double screenX = toTarget.dot(cameraRight);
+            double screenY = toTarget.dot(cameraUp);
             double arrowX;
             double arrowY;
-            if (horizontalDistance < 0.5D) {
-                // 目标几乎正上方/正下方时，水平方位没有意义，直接垂直指向
-                arrowX = 0.0D;
-                arrowY = dy >= 0.0D ? -1.0D : 1.0D;
+            if (forward > 0.0D) {
+                // 目标在相机前方：使用屏幕投影方向（屏幕 y 向下，因此取负）
+                double screenLength = Math.sqrt(screenX * screenX + screenY * screenY);
+                if (screenLength > 1.0E-4D) {
+                    arrowX = screenX / screenLength;
+                    arrowY = -screenY / screenLength;
+                } else {
+                    // 目标正好在屏幕中心，方向没有意义，箭头朝上
+                    arrowX = 0.0D;
+                    arrowY = -1.0D;
+                }
             } else {
-                double theta = Math.toRadians(heading);
+                // 目标在身后，屏幕上无法表示，退回水平方位雷达方向
+                double theta = Math.toRadians(Mth.wrapDegrees(angle));
                 arrowX = Math.sin(theta);
                 arrowY = -Math.cos(theta);
             }
