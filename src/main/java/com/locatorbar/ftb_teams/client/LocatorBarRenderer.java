@@ -1,6 +1,7 @@
 package com.locatorbar.ftb_teams.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -90,6 +91,13 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             int yShift = Mth.clamp((int) Math.round(-dy / 24.0D), -2, 2);
             int markerCenterY = top + BAR_HEIGHT / 2 + yShift;
 
+            // 矢量方向：水平分量与定位条位置一致（-1 左，+1 右），
+            // 垂直分量由仰角得出（+1 正上方，-1 正下方）
+            double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+            float pitch = (float) (Math.atan2(dy, horizontalDistance) * (180.0D / Math.PI));
+            float horizontal = Mth.clamp(angle, -90.0F, 90.0F) / 90.0F;
+            float vertical = Mth.clamp(pitch, -90.0F, 90.0F) / 90.0F;
+
             float fade = unlimitedRange ? 0.0F : Mth.clamp((float) (distance / range), 0.0F, 1.0F);
             int alpha = (int) (255.0F - fade * 150.0F);
             if (behind) {
@@ -108,7 +116,8 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
                     playerColor(tracked.id()),
                     alpha,
                     distance,
-                    dy
+                    horizontal,
+                    vertical
             ));
         }
 
@@ -164,29 +173,46 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
         graphics.fill(marker.x, marker.y, marker.x + MARKER_SIZE, marker.y + MARKER_SIZE,
                 withAlpha(marker.color, marker.alpha));
 
-        // 用上下小箭头表示相对高度关系
-        if (marker.verticalDelta > 2.0D) {
-            drawVerticalArrow(graphics, marker, true);
-        } else if (marker.verticalDelta < -2.0D) {
-            drawVerticalArrow(graphics, marker, false);
-        }
+        drawDirectionArrow(graphics, marker);
     }
 
-    private static void drawVerticalArrow(GuiGraphics graphics, Marker marker, boolean up) {
-        int color = withAlpha(marker.color, Math.max(120, marker.alpha));
-        int centerX = marker.x + MARKER_SIZE / 2;
-
-        if (up) {
-            int y = marker.y - 5;
-            graphics.fill(centerX, y, centerX + 1, y + 1, color);
-            graphics.fill(centerX - 1, y + 1, centerX + 2, y + 2, color);
-            graphics.fill(centerX - 2, y + 2, centerX + 3, y + 3, color);
-        } else {
-            int y = marker.y + MARKER_SIZE + 2;
-            graphics.fill(centerX - 2, y, centerX + 3, y + 1, color);
-            graphics.fill(centerX - 1, y + 1, centerX + 2, y + 2, color);
-            graphics.fill(centerX, y + 2, centerX + 1, y + 3, color);
+    /**
+     * 以圆点为原点绘制一个指向目标真实相对方向的箭头。
+     * <p>
+     * 水平分量对应目标左右方位，垂直分量对应目标仰角，
+     * 因此箭头可以表示“右上方”“左下方”“正上方”等任意矢量方向。
+     */
+    private static void drawDirectionArrow(GuiGraphics graphics, Marker marker) {
+        double horizontal = marker.horizontal;
+        double vertical = marker.vertical;
+        double length = Math.sqrt(horizontal * horizontal + vertical * vertical);
+        // 目标几乎在正前方且同一高度时，方向没有意义，不绘制箭头
+        if (length < 0.12D) {
+            return;
         }
+
+        int color = withAlpha(marker.color, Math.max(140, marker.alpha));
+        int centerX = marker.x + MARKER_SIZE / 2;
+        int centerY = marker.y + MARKER_SIZE / 2;
+
+        // 水平向右为 +x，垂直向上为 +y；旋转 0° 表示箭头朝上
+        float rotation = (float) Math.toDegrees(Math.atan2(horizontal, vertical));
+
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.translate(centerX, centerY, 0.0F);
+        pose.mulPose(Axis.ZP.rotationDegrees(rotation));
+
+        // 局部坐标：0 在圆点中心，-y 为箭头指向方向
+        // 箭头从圆点边缘外侧开始，避免覆盖圆点本身
+        int tailY = -(MARKER_SIZE / 2 + 1);
+        int tipY = tailY - 6;
+        graphics.fill(-1, tipY + 3, 1, tailY, color);
+        graphics.fill(-2, tipY + 2, 2, tipY + 3, color);
+        graphics.fill(-3, tipY + 1, 3, tipY + 2, color);
+        graphics.fill(-1, tipY, 1, tipY + 1, color);
+
+        pose.popPose();
     }
 
     private static void drawLabels(GuiGraphics graphics, Minecraft minecraft, List<Marker> markers, int top, int screenWidth) {
@@ -286,17 +312,19 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
         private final int color;
         private final int alpha;
         private final double distance;
-        private final double verticalDelta;
+        private final double horizontal;
+        private final double vertical;
 
         private Marker(ClientTeamPositions.TrackedPlayer entry, int x, int y, int color, int alpha,
-                       double distance, double verticalDelta) {
+                       double distance, double horizontal, double vertical) {
             this.entry = entry;
             this.x = x;
             this.y = y;
             this.color = color;
             this.alpha = alpha;
             this.distance = distance;
-            this.verticalDelta = verticalDelta;
+            this.horizontal = horizontal;
+            this.vertical = vertical;
         }
     }
 }
