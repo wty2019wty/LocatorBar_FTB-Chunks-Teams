@@ -90,14 +90,21 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
             int yShift = Mth.clamp((int) Math.round(-dy / 24.0D), -2, 2);
             int markerCenterY = top + BAR_HEIGHT / 2 + yShift;
 
-            // 矢量方向：把目标的三维相对方向投影到“屏幕右 / 世界上”两个轴上
-            // 水平分量：-1 左，+1 右；垂直分量：-1 正下方，+1 正上方
+            // 箭头方向：水平面上的相对方位，形成 360° 连续方向指针
+            // 正前方 -> 箭头朝上，右侧 -> 朝右，正后方 -> 朝下，左侧 -> 朝左
             double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
-            float pitch = (float) (Math.atan2(dy, horizontalDistance) * (180.0D / Math.PI));
-            float horizontal = horizontalDistance < 0.5D
-                    ? 0.0F
-                    : Mth.clamp(angle, -90.0F, 90.0F) / 90.0F;
-            float vertical = Mth.clamp(pitch, -90.0F, 90.0F) / 90.0F;
+            float heading = Mth.wrapDegrees(angle);
+            double arrowX;
+            double arrowY;
+            if (horizontalDistance < 0.5D) {
+                // 目标几乎正上方/正下方时，水平方位没有意义，直接垂直指向
+                arrowX = 0.0D;
+                arrowY = dy >= 0.0D ? -1.0D : 1.0D;
+            } else {
+                double theta = Math.toRadians(heading);
+                arrowX = Math.sin(theta);
+                arrowY = -Math.cos(theta);
+            }
 
             float fade = unlimitedRange ? 0.0F : Mth.clamp((float) (distance / range), 0.0F, 1.0F);
             int alpha = (int) (255.0F - fade * 150.0F);
@@ -117,8 +124,8 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
                     playerColor(tracked.id()),
                     alpha,
                     distance,
-                    horizontal,
-                    vertical
+                    arrowX,
+                    arrowY
             ));
         }
 
@@ -185,17 +192,15 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
      * 而不是只在上下左右几个固定方向之间切换。
      */
     private static void drawDirectionArrow(GuiGraphics graphics, Marker marker) {
-        double horizontal = marker.horizontal;
-        double vertical = marker.vertical;
-        double length = Math.sqrt(horizontal * horizontal + vertical * vertical);
-        // 目标几乎在正前方且同一高度时，方向没有意义，不绘制箭头
+        double ux = marker.arrowX;
+        double uy = marker.arrowY;
+        double length = Math.sqrt(ux * ux + uy * uy);
+        // 理论上方向向量已经归一化，这里只做保护
         if (length < 0.10D) {
             return;
         }
-
-        // 屏幕坐标系：右为 +x，下为 +y；vertical 向上为正，因此取负
-        double ux = horizontal / length;
-        double uy = -vertical / length;
+        ux /= length;
+        uy /= length;
 
         int centerX = marker.x + MARKER_SIZE / 2;
         int centerY = marker.y + MARKER_SIZE / 2;
@@ -204,7 +209,7 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
         double start = MARKER_SIZE / 2.0 + 1.5D;
         double end = 13.0D;
 
-        // 杆：沿方向逐像素采样，保证任意角度都连续，不依赖 pose 旋转
+        // 杆：沿方向逐像素采样，保证任意角度都连续
         for (double t = start; t <= end - 3.5D; t += 0.4D) {
             int px = (int) Math.round(centerX + ux * t);
             int py = (int) Math.round(centerY + uy * t);
@@ -326,19 +331,19 @@ public final class LocatorBarRenderer implements LayeredDraw.Layer {
         private final int color;
         private final int alpha;
         private final double distance;
-        private final double horizontal;
-        private final double vertical;
+        private final double arrowX;
+        private final double arrowY;
 
         private Marker(ClientTeamPositions.TrackedPlayer entry, int x, int y, int color, int alpha,
-                       double distance, double horizontal, double vertical) {
+                       double distance, double arrowX, double arrowY) {
             this.entry = entry;
             this.x = x;
             this.y = y;
             this.color = color;
             this.alpha = alpha;
             this.distance = distance;
-            this.horizontal = horizontal;
-            this.vertical = vertical;
+            this.arrowX = arrowX;
+            this.arrowY = arrowY;
         }
     }
 }
